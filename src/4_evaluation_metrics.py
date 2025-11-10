@@ -2,14 +2,8 @@
 Evaluation Metrics Script
 ==========================
 
-This script computes comprehensive evaluation metrics for the trained classifiers.
-Includes various performance metrics and generates detailed reports for analysis.
-
-Metrics computed:
-- Accuracy, Precision, Recall, F1-score
-- Confusion matrices
-- Per-class performance metrics
-- Cross-dataset comparisons
+This script computes comprehensive evaluation metrics for the trained MLP classifier.
+Generates metrics.json and confusion_matrix.png for emotion recognition.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -17,15 +11,6 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
-
-TODO (Teammate C - Evaluator): Main responsibilities
-- Implement additional metrics (ROC-AUC, PR curves for binary tasks like Gender ID)
-- Create detailed per-class analysis reports
-- Compare performance across different datasets and tasks
-- Generate statistical significance tests between classifiers
-- Create comprehensive benchmark tables
-- Analyze error patterns and failure cases
-- Export results in multiple formats (CSV, JSON, LaTeX tables)
 """
 
 import os
@@ -33,13 +18,16 @@ import logging
 import json
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 import joblib
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, classification_report, roc_auc_score, cohen_kappa_score
+    confusion_matrix, classification_report, cohen_kappa_score
 )
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -51,9 +39,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class SimpleMLP(nn.Module):
+    """Simple MLP classifier for emotion recognition."""
+    
+    def __init__(self, input_dim: int, hidden_dim: int, num_classes: int):
+        super(SimpleMLP, self).__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
+    
+    def forward(self, x):
+        return self.layers(x)
+
+
 class EvaluationMetrics:
     """
-    Comprehensive evaluation of trained classifiers.
+    Comprehensive evaluation of trained emotion classifier.
     
     Computes various performance metrics and generates visualizations.
     """
@@ -77,33 +84,45 @@ class EvaluationMetrics:
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
-        logger.info("EvaluationMetrics initialized")
+        self.device = torch.device("cpu")
+        
+        logger.info("EvaluationMetrics initialized (CPU mode)")
     
     def load_model_and_preprocessors(
         self,
-        dataset_name: str,
-        classifier_type: str
-    ) -> Tuple[Any, Any, Any]:
+        dataset_name: str = "emotion"
+    ) -> Tuple[nn.Module, Any, Any]:
         """
         Load trained model and preprocessors.
         
         Args:
             dataset_name: Name of the dataset
-            classifier_type: Type of classifier
             
         Returns:
             Tuple of (model, scaler, label_encoder)
         """
-        model_path = self.models_dir / f"{dataset_name}_{classifier_type}.pkl"
+        model_path = self.models_dir / f"{dataset_name}_model.pt"
         scaler_path = self.models_dir / f"{dataset_name}_scaler.pkl"
         encoder_path = self.models_dir / f"{dataset_name}_encoder.pkl"
         
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
         
-        model = joblib.load(model_path)
+        # Load model checkpoint
+        checkpoint = torch.load(model_path, map_location=self.device)
+        
+        # Recreate model architecture
+        arch = checkpoint['model_architecture']
+        model = SimpleMLP(arch['input_dim'], arch['hidden_dim'], arch['num_classes'])
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.to(self.device)
+        model.eval()
+        
+        # Load preprocessors
         scaler = joblib.load(scaler_path)
         encoder = joblib.load(encoder_path)
+        
+        logger.info(f"Loaded model from {model_path}")
         
         return model, scaler, encoder
     
@@ -111,6 +130,7 @@ class EvaluationMetrics:
         self,
         dataset_name: str,
         scaler: Any,
+        encoder: Any,
         test_size: float = 0.2
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -119,24 +139,26 @@ class EvaluationMetrics:
         Args:
             dataset_name: Name of the dataset
             scaler: Fitted scaler for normalization
+            encoder: Label encoder
             test_size: Proportion of data used for testing
             
         Returns:
             Tuple of (X_test, y_test)
         """
-        embeddings_path = self.embeddings_dir / f"{dataset_name}_embeddings.npy"
-        labels_path = self.embeddings_dir / f"{dataset_name}_labels.npy"
+        embeddings_path = self.embeddings_dir / f"{dataset_name}_embeddings.npz"
         
-        embeddings = np.load(embeddings_path)
-        labels = np.load(labels_path)
+        if not embeddings_path.exists():
+            raise FileNotFoundError(f"Embeddings not found: {embeddings_path}")
+        
+        # Load data
+        data = np.load(embeddings_path)
+        embeddings = data['embeddings']
+        labels = data['labels']
+        
+        # Encode labels
+        labels_encoded = encoder.transform(labels)
         
         # Split data (same as in training)
-        from sklearn.model_selection import train_test_split
-        from sklearn.preprocessing import LabelEncoder
-        
-        encoder = LabelEncoder()
-        labels_encoded = encoder.fit_transform(labels)
-        
         _, X_test, _, y_test = train_test_split(
             embeddings, labels_encoded,
             test_size=test_size,
@@ -144,6 +166,7 @@ class EvaluationMetrics:
             stratify=labels_encoded
         )
         
+        # Normalize
         X_test = scaler.transform(X_test)
         
         return X_test, y_test
@@ -151,8 +174,7 @@ class EvaluationMetrics:
     def compute_metrics(
         self,
         y_true: np.ndarray,
-        y_pred: np.ndarray,
-        average: str = 'weighted'
+        y_pred: np.ndarray
     ) -> Dict[str, float]:
         """
         Compute comprehensive metrics.
@@ -160,20 +182,19 @@ class EvaluationMetrics:
         Args:
             y_true: True labels
             y_pred: Predicted labels
-            average: Averaging strategy for multi-class metrics
             
         Returns:
             Dictionary of metric values
         """
         metrics = {
-            'accuracy': accuracy_score(y_true, y_pred),
-            'precision_macro': precision_score(y_true, y_pred, average='macro', zero_division=0),
-            'precision_weighted': precision_score(y_true, y_pred, average='weighted', zero_division=0),
-            'recall_macro': recall_score(y_true, y_pred, average='macro', zero_division=0),
-            'recall_weighted': recall_score(y_true, y_pred, average='weighted', zero_division=0),
-            'f1_macro': f1_score(y_true, y_pred, average='macro', zero_division=0),
-            'f1_weighted': f1_score(y_true, y_pred, average='weighted', zero_division=0),
-            'cohen_kappa': cohen_kappa_score(y_true, y_pred)
+            'accuracy': float(accuracy_score(y_true, y_pred)),
+            'precision_macro': float(precision_score(y_true, y_pred, average='macro', zero_division=0)),
+            'precision_weighted': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)),
+            'recall_macro': float(recall_score(y_true, y_pred, average='macro', zero_division=0)),
+            'recall_weighted': float(recall_score(y_true, y_pred, average='weighted', zero_division=0)),
+            'f1_macro': float(f1_score(y_true, y_pred, average='macro', zero_division=0)),
+            'f1_weighted': float(f1_score(y_true, y_pred, average='weighted', zero_division=0)),
+            'cohen_kappa': float(cohen_kappa_score(y_true, y_pred))
         }
         
         return metrics
@@ -183,8 +204,7 @@ class EvaluationMetrics:
         y_true: np.ndarray,
         y_pred: np.ndarray,
         class_names: List[str],
-        dataset_name: str,
-        classifier_type: str
+        save_name: str = "confusion_matrix"
     ):
         """
         Plot and save confusion matrix.
@@ -193,8 +213,7 @@ class EvaluationMetrics:
             y_true: True labels
             y_pred: Predicted labels
             class_names: Names of classes
-            dataset_name: Name of the dataset
-            classifier_type: Type of classifier
+            save_name: Filename for saving (without extension)
         """
         cm = confusion_matrix(y_true, y_pred)
         
@@ -205,217 +224,104 @@ class EvaluationMetrics:
             fmt='d',
             cmap='Blues',
             xticklabels=class_names,
-            yticklabels=class_names
+            yticklabels=class_names,
+            cbar_kws={'label': 'Count'}
         )
-        plt.title(f'Confusion Matrix - {dataset_name} ({classifier_type})')
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
+        plt.title('Confusion Matrix - Emotion Classification', fontsize=14, fontweight='bold')
+        plt.ylabel('True Emotion', fontsize=12)
+        plt.xlabel('Predicted Emotion', fontsize=12)
         plt.tight_layout()
         
-        output_path = self.results_dir / f"cm_{dataset_name}_{classifier_type}.png"
+        output_path = self.results_dir / f"{save_name}.png"
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
         
         logger.info(f"Confusion matrix saved to {output_path}")
     
-    def generate_classification_report(
-        self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        class_names: List[str],
-        dataset_name: str,
-        classifier_type: str
-    ):
-        """
-        Generate and save detailed classification report.
-        
-        Args:
-            y_true: True labels
-            y_pred: Predicted labels
-            class_names: Names of classes
-            dataset_name: Name of the dataset
-            classifier_type: Type of classifier
-        """
-        report = classification_report(
-            y_true, y_pred,
-            target_names=class_names,
-            zero_division=0,
-            output_dict=True
-        )
-        
-        # Convert to DataFrame for better visualization
-        df_report = pd.DataFrame(report).transpose()
-        
-        # Save to CSV
-        output_path = self.results_dir / f"report_{dataset_name}_{classifier_type}.csv"
-        df_report.to_csv(output_path)
-        
-        logger.info(f"Classification report saved to {output_path}")
-        
-        return report
-    
     def evaluate_model(
         self,
-        dataset_name: str,
-        classifier_type: str
+        dataset_name: str = "emotion"
     ) -> Dict[str, Any]:
         """
-        Evaluate a trained model.
+        Evaluate trained emotion model.
         
         Args:
             dataset_name: Name of the dataset
-            classifier_type: Type of classifier
             
         Returns:
             Dictionary of evaluation results
         """
-        logger.info(f"Evaluating {classifier_type} on {dataset_name}")
+        logger.info(f"Evaluating {dataset_name} model...")
         
         # Load model and data
-        model, scaler, encoder = self.load_model_and_preprocessors(dataset_name, classifier_type)
-        X_test, y_test = self.load_test_data(dataset_name, scaler)
+        model, scaler, encoder = self.load_model_and_preprocessors(dataset_name)
+        X_test, y_test = self.load_test_data(dataset_name, scaler, encoder)
         
         # Make predictions
-        y_pred = model.predict(X_test)
+        X_test_tensor = torch.FloatTensor(X_test)
+        
+        with torch.no_grad():
+            outputs = model(X_test_tensor)
+            _, predicted = torch.max(outputs, 1)
+        
+        y_pred = predicted.numpy()
         
         # Compute metrics
         metrics = self.compute_metrics(y_test, y_pred)
         
         # Generate visualizations
         class_names = encoder.classes_
-        self.plot_confusion_matrix(y_test, y_pred, class_names, dataset_name, classifier_type)
-        report = self.generate_classification_report(y_test, y_pred, class_names, dataset_name, classifier_type)
+        self.plot_confusion_matrix(y_test, y_pred, class_names)
+        
+        # Generate classification report
+        report = classification_report(
+            y_test, y_pred,
+            target_names=class_names,
+            zero_division=0,
+            output_dict=True
+        )
         
         # Log results
-        logger.info(f"\nMetrics for {dataset_name} - {classifier_type}:")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Evaluation Results for {dataset_name.upper()}")
+        logger.info(f"{'='*60}")
         for metric, value in metrics.items():
             logger.info(f"  {metric}: {value:.4f}")
+        logger.info(f"{'='*60}")
+        
+        # Save metrics to JSON
+        metrics_path = self.results_dir / "metrics.json"
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+        logger.info(f"Metrics saved to {metrics_path}")
         
         return {
             'metrics': metrics,
             'classification_report': report,
             'num_samples': len(y_test),
-            'num_classes': len(class_names)
+            'num_classes': len(class_names),
+            'classes': list(class_names)
         }
     
-    def compare_classifiers(
-        self,
-        dataset_name: str,
-        classifier_types: List[str] = ['svm', 'rf', 'mlp', 'lr']
-    ) -> pd.DataFrame:
+    def run_evaluation(self):
         """
-        Compare performance of different classifiers on a dataset.
-        
-        Args:
-            dataset_name: Name of the dataset
-            classifier_types: List of classifier types to compare
-            
-        Returns:
-            DataFrame with comparison results
+        Run comprehensive evaluation for emotion model.
         """
-        logger.info(f"\nComparing classifiers on {dataset_name}")
+        logger.info("Starting evaluation...")
         
-        results = []
-        for clf_type in classifier_types:
-            try:
-                eval_results = self.evaluate_model(dataset_name, clf_type)
-                
-                result_row = {
-                    'dataset': dataset_name,
-                    'classifier': clf_type,
-                    **eval_results['metrics']
-                }
-                results.append(result_row)
-            except Exception as e:
-                logger.warning(f"Failed to evaluate {clf_type} on {dataset_name}: {e}")
-        
-        df_results = pd.DataFrame(results)
-        
-        # Save comparison
-        output_path = self.results_dir / f"comparison_{dataset_name}.csv"
-        df_results.to_csv(output_path, index=False)
-        logger.info(f"Comparison results saved to {output_path}")
-        
-        return df_results
-    
-    def plot_classifier_comparison(
-        self,
-        df_results: pd.DataFrame,
-        metric: str = 'accuracy'
-    ):
-        """
-        Plot comparison of classifiers.
-        
-        Args:
-            df_results: DataFrame with comparison results
-            metric: Metric to plot
-        """
-        plt.figure(figsize=(12, 6))
-        
-        datasets = df_results['dataset'].unique()
-        classifiers = df_results['classifier'].unique()
-        
-        x = np.arange(len(datasets))
-        width = 0.2
-        
-        for i, clf in enumerate(classifiers):
-            clf_data = df_results[df_results['classifier'] == clf]
-            values = [clf_data[clf_data['dataset'] == ds][metric].values[0] 
-                     if len(clf_data[clf_data['dataset'] == ds]) > 0 else 0 
-                     for ds in datasets]
-            plt.bar(x + i * width, values, width, label=clf)
-        
-        plt.xlabel('Dataset')
-        plt.ylabel(metric.capitalize())
-        plt.title(f'Classifier Comparison - {metric.capitalize()}')
-        plt.xticks(x + width * 1.5, datasets)
-        plt.legend()
-        plt.tight_layout()
-        
-        output_path = self.results_dir / f"comparison_{metric}.png"
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        logger.info(f"Comparison plot saved to {output_path}")
-    
-    def run_full_evaluation(
-        self,
-        datasets: List[str] = ['iemocap', 'librispeech', 'slurp', 'commonvoice'],
-        classifier_types: List[str] = ['svm', 'rf', 'mlp', 'lr']
-    ):
-        """
-        Run comprehensive evaluation on all datasets and classifiers.
-        
-        Args:
-            datasets: List of dataset names
-            classifier_types: List of classifier types
-        """
-        logger.info("Starting full evaluation...")
-        
-        all_results = []
-        for dataset in datasets:
-            try:
-                df_results = self.compare_classifiers(dataset, classifier_types)
-                all_results.append(df_results)
-            except Exception as e:
-                logger.warning(f"Failed to evaluate {dataset}: {e}")
-        
-        if all_results:
-            # Combine all results
-            combined_results = pd.concat(all_results, ignore_index=True)
-            
-            # Save combined results
-            output_path = self.results_dir / "all_results.csv"
-            combined_results.to_csv(output_path, index=False)
-            logger.info(f"All results saved to {output_path}")
-            
-            # Generate comparison plots
-            for metric in ['accuracy', 'f1_macro', 'f1_weighted']:
-                self.plot_classifier_comparison(combined_results, metric)
-        
-        logger.info("Full evaluation complete!")
+        try:
+            results = self.evaluate_model('emotion')
+            logger.info("\n✓ Evaluation complete!")
+            logger.info(f"  - Metrics saved to: results/metrics.json")
+            logger.info(f"  - Confusion matrix saved to: results/confusion_matrix.png")
+            return results
+        except Exception as e:
+            logger.error(f"✗ Evaluation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 if __name__ == "__main__":
     evaluator = EvaluationMetrics()
-    evaluator.run_full_evaluation()
+    evaluator.run_evaluation()
