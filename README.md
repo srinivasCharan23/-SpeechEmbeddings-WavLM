@@ -147,6 +147,7 @@ Outputs:
 
 ### WavLM Model
 
+- **Model:** `microsoft/wavlm-base` (HuggingFace Transformers)
 - **Architecture:** Transformer-based self-supervised model
 - **Pre-training:** Large-scale unlabeled speech data
 - **Input:** 16kHz raw audio waveforms
