@@ -17,6 +17,15 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
+
+TODO (Teammate C - Evaluator): Main responsibilities
+- Implement additional metrics (ROC-AUC, PR curves for binary tasks like Gender ID)
+- Create detailed per-class analysis reports
+- Compare performance across different datasets and tasks
+- Generate statistical significance tests between classifiers
+- Create comprehensive benchmark tables
+- Analyze error patterns and failure cases
+- Export results in multiple formats (CSV, JSON, LaTeX tables)
 """
 
 import os

@@ -17,6 +17,16 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
+
+TODO (Teammate D - Visualizer): Main responsibilities
+- Create interactive 3D visualizations (plotly)
+- Generate t-SNE visualizations for comparison with UMAP
+- Plot decision boundaries for classifiers
+- Create animated visualizations showing embedding evolution
+- Generate comparison grids for all four tasks
+- Design publication-quality figures with proper styling
+- Create dashboard-style summary visualizations
+- Export high-resolution figures for papers/presentations
 """
 
 import os

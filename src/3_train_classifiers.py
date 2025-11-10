@@ -4,10 +4,10 @@ Classifier Training Script
 
 This script trains various classifiers on the extracted WavLM embeddings
 for different downstream tasks:
-- Emotion recognition (IEMOCAP)
-- Speaker identification (LibriSpeech)
-- Intent classification (SLURP)
-- Language/accent classification (CommonVoice)
+- Emotion Identification (IEMOCAP)
+- Gender Identification (LibriSpeech)
+- Intent Identification (SLURP)
+- Cross-language Embeddings (CommonVoice English + Hindi)
 
 Implements multiple classifier architectures:
 - Support Vector Machines (SVM)
@@ -21,6 +21,14 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
+
+TODO (Teammate B - Trainer): Main responsibilities
+- Fine-tune hyperparameters for each classifier type
+- Implement cross-validation strategies
+- Optimize training for Emotion and Gender classification tasks
+- Add early stopping and regularization techniques
+- Experiment with different feature scaling methods
+- Save and manage model checkpoints effectively
 """
 
 import os

@@ -7,5 +7,8 @@ evaluate
 scikit-learn
 umap-learn
 matplotlib
+seaborn
 pandas
+numpy
 tqdm
+joblib
