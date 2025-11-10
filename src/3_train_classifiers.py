@@ -2,18 +2,8 @@
 Classifier Training Script
 ===========================
 
-This script trains various classifiers on the extracted WavLM embeddings
-for different downstream tasks:
-- Emotion Identification (IEMOCAP)
-- Gender Identification (LibriSpeech)
-- Intent Identification (SLURP)
-- Cross-language Embeddings (CommonVoice English + Hindi)
-
-Implements multiple classifier architectures:
-- Support Vector Machines (SVM)
-- Random Forest
-- Multi-Layer Perceptron (MLP)
-- Logistic Regression
+This script trains an MLP classifier on extracted WavLM embeddings
+for emotion identification (CPU-optimized).
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -21,14 +11,6 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
-
-TODO (Teammate B - Trainer): Main responsibilities
-- Fine-tune hyperparameters for each classifier type
-- Implement cross-validation strategies
-- Optimize training for Emotion and Gender classification tasks
-- Add early stopping and regularization techniques
-- Experiment with different feature scaling methods
-- Save and manage model checkpoints effectively
 """
 
 import os
@@ -36,14 +18,12 @@ import logging
 import pickle
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
 from pathlib import Path
 from typing import Dict, Tuple, Any, List
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 import joblib
 
@@ -55,11 +35,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class SimpleMLP(nn.Module):
+    """Simple MLP classifier for emotion recognition."""
+    
+    def __init__(self, input_dim: int, hidden_dim: int, num_classes: int):
+        super(SimpleMLP, self).__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
+    
+    def forward(self, x):
+        return self.layers(x)
+
+
 class ClassifierTrainer:
     """
-    Train and evaluate classifiers on speech embeddings.
-    
-    Supports multiple classifier types and hyperparameter tuning.
+    Train and evaluate MLP classifier on speech embeddings (CPU-optimized).
     """
     
     def __init__(
@@ -85,7 +82,10 @@ class ClassifierTrainer:
         self.label_encoder = LabelEncoder()
         self.scaler = StandardScaler()
         
-        logger.info(f"ClassifierTrainer initialized")
+        # Set device to CPU
+        self.device = torch.device("cpu")
+        
+        logger.info(f"ClassifierTrainer initialized (CPU mode)")
         logger.info(f"Models will be saved to: {models_dir}")
     
     def load_dataset(
@@ -101,18 +101,19 @@ class ClassifierTrainer:
         Returns:
             Tuple of (embeddings, labels)
         """
-        embeddings_path = self.embeddings_dir / f"{dataset_name}_embeddings.npy"
-        labels_path = self.embeddings_dir / f"{dataset_name}_labels.npy"
+        embeddings_path = self.embeddings_dir / f"{dataset_name}_embeddings.npz"
         
-        if not embeddings_path.exists() or not labels_path.exists():
-            raise FileNotFoundError(f"Embeddings or labels not found for {dataset_name}")
+        if not embeddings_path.exists():
+            raise FileNotFoundError(f"Embeddings not found: {embeddings_path}")
         
-        embeddings = np.load(embeddings_path)
-        labels = np.load(labels_path)
+        # Load from NPZ file
+        data = np.load(embeddings_path)
+        embeddings = data['embeddings']
+        labels = data['labels']
         
         logger.info(f"Loaded {dataset_name}: {embeddings.shape[0]} samples, "
                    f"embedding dim: {embeddings.shape[1]}")
-        logger.info(f"Unique labels: {len(np.unique(labels))}")
+        logger.info(f"Unique labels: {np.unique(labels)}")
         
         return embeddings, labels
     
@@ -122,7 +123,7 @@ class ClassifierTrainer:
         labels: np.ndarray,
         test_size: float = 0.2,
         val_size: float = 0.1
-    ) -> Dict[str, np.ndarray]:
+    ) -> Dict[str, Any]:
         """
         Split and preprocess data for training.
         
@@ -168,109 +169,122 @@ class ClassifierTrainer:
             'X_test': X_test, 'y_test': y_test
         }
     
-    def get_classifier(self, classifier_type: str) -> Any:
-        """
-        Get classifier instance with default hyperparameters.
-        
-        Args:
-            classifier_type: Type of classifier ('svm', 'rf', 'mlp', 'lr')
-            
-        Returns:
-            Classifier instance
-        """
-        classifiers = {
-            'svm': SVC(kernel='rbf', random_state=self.random_state),
-            'rf': RandomForestClassifier(n_estimators=100, random_state=self.random_state),
-            'mlp': MLPClassifier(
-                hidden_layer_sizes=(256, 128),
-                max_iter=500,
-                random_state=self.random_state,
-                early_stopping=True
-            ),
-            'lr': LogisticRegression(max_iter=1000, random_state=self.random_state)
-        }
-        
-        if classifier_type not in classifiers:
-            raise ValueError(f"Unknown classifier type: {classifier_type}")
-        
-        return classifiers[classifier_type]
-    
-    def train_classifier(
+    def train_mlp(
         self,
         X_train: np.ndarray,
         y_train: np.ndarray,
-        classifier_type: str,
-        use_grid_search: bool = False
-    ) -> Any:
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+        num_classes: int,
+        hidden_dim: int = 128,
+        epochs: int = 50,
+        lr: float = 0.001
+    ) -> nn.Module:
         """
-        Train a classifier.
+        Train MLP classifier (CPU-optimized).
         
         Args:
             X_train: Training features
             y_train: Training labels
-            classifier_type: Type of classifier
-            use_grid_search: Whether to use grid search for hyperparameter tuning
+            X_val: Validation features
+            y_val: Validation labels
+            num_classes: Number of emotion classes
+            hidden_dim: Hidden layer dimension
+            epochs: Number of training epochs
+            lr: Learning rate
             
         Returns:
-            Trained classifier
+            Trained MLP model
         """
-        logger.info(f"Training {classifier_type} classifier...")
+        logger.info(f"Training MLP classifier...")
+        logger.info(f"Hidden dim: {hidden_dim}, Epochs: {epochs}, LR: {lr}")
         
-        clf = self.get_classifier(classifier_type)
+        # Get input dimension
+        input_dim = X_train.shape[1]
         
-        if use_grid_search:
-            # Define parameter grids for each classifier
-            param_grids = {
-                'svm': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']},
-                'rf': {'n_estimators': [50, 100, 200], 'max_depth': [10, 20, None]},
-                'mlp': {'hidden_layer_sizes': [(128,), (256, 128), (512, 256)]},
-                'lr': {'C': [0.1, 1, 10]}
-            }
+        # Create model
+        model = SimpleMLP(input_dim, hidden_dim, num_classes).to(self.device)
+        
+        # Loss and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        
+        # Convert to tensors
+        X_train_tensor = torch.FloatTensor(X_train)
+        y_train_tensor = torch.LongTensor(y_train)
+        X_val_tensor = torch.FloatTensor(X_val)
+        y_val_tensor = torch.LongTensor(y_val)
+        
+        # Training loop
+        best_val_acc = 0.0
+        best_model_state = None
+        
+        for epoch in range(epochs):
+            # Training
+            model.train()
+            optimizer.zero_grad()
+            outputs = model(X_train_tensor)
+            loss = criterion(outputs, y_train_tensor)
+            loss.backward()
+            optimizer.step()
             
-            grid_search = GridSearchCV(
-                clf,
-                param_grids[classifier_type],
-                cv=3,
-                n_jobs=-1,
-                verbose=1
-            )
-            grid_search.fit(X_train, y_train)
-            clf = grid_search.best_estimator_
-            logger.info(f"Best parameters: {grid_search.best_params_}")
-        else:
-            clf.fit(X_train, y_train)
+            # Validation
+            model.eval()
+            with torch.no_grad():
+                val_outputs = model(X_val_tensor)
+                val_loss = criterion(val_outputs, y_val_tensor)
+                _, predicted = torch.max(val_outputs, 1)
+                val_acc = (predicted == y_val_tensor).float().mean().item()
+            
+            # Save best model
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                best_model_state = model.state_dict().copy()
+            
+            if (epoch + 1) % 10 == 0:
+                logger.info(f"Epoch [{epoch+1}/{epochs}], "
+                          f"Loss: {loss.item():.4f}, "
+                          f"Val Loss: {val_loss.item():.4f}, "
+                          f"Val Acc: {val_acc:.4f}")
         
-        logger.info(f"{classifier_type} training complete")
-        return clf
+        # Load best model
+        model.load_state_dict(best_model_state)
+        logger.info(f"MLP training complete. Best val accuracy: {best_val_acc:.4f}")
+        
+        return model
     
     def evaluate_classifier(
         self,
-        clf: Any,
+        model: nn.Module,
         X_test: np.ndarray,
-        y_test: np.ndarray,
-        dataset_name: str,
-        classifier_type: str
+        y_test: np.ndarray
     ) -> Dict[str, float]:
         """
         Evaluate classifier performance.
         
         Args:
-            clf: Trained classifier
+            model: Trained model
             X_test: Test features
             y_test: Test labels
-            dataset_name: Name of the dataset
-            classifier_type: Type of classifier
             
         Returns:
             Dictionary of evaluation metrics
         """
-        y_pred = clf.predict(X_test)
+        model.eval()
+        
+        X_test_tensor = torch.FloatTensor(X_test)
+        
+        with torch.no_grad():
+            outputs = model(X_test_tensor)
+            _, predicted = torch.max(outputs, 1)
+        
+        y_pred = predicted.numpy()
         
         accuracy = accuracy_score(y_test, y_pred)
-        f1_macro = f1_score(y_test, y_pred, average='macro')
-        f1_weighted = f1_score(y_test, y_pred, average='weighted')
+        f1_macro = f1_score(y_test, y_pred, average='macro', zero_division=0)
+        f1_weighted = f1_score(y_test, y_pred, average='weighted', zero_division=0)
         
-        logger.info(f"\n{dataset_name} - {classifier_type} Results:")
+        logger.info(f"\nEmotion Classification Results:")
         logger.info(f"Accuracy: {accuracy:.4f}")
         logger.info(f"F1 (macro): {f1_macro:.4f}")
         logger.info(f"F1 (weighted): {f1_weighted:.4f}")
@@ -287,75 +301,85 @@ class ClassifierTrainer:
             'accuracy': accuracy,
             'f1_macro': f1_macro,
             'f1_weighted': f1_weighted,
-            'report': report
+            'y_pred': y_pred,
+            'y_test': y_test
         }
     
     def save_model(
         self,
-        clf: Any,
-        dataset_name: str,
-        classifier_type: str
+        model: nn.Module,
+        dataset_name: str = "emotion"
     ):
         """
-        Save trained model to disk.
+        Save trained model to disk as PyTorch model.
         
         Args:
-            clf: Trained classifier
+            model: Trained model
             dataset_name: Name of the dataset
-            classifier_type: Type of classifier
         """
-        model_path = self.models_dir / f"{dataset_name}_{classifier_type}.pkl"
+        model_path = self.models_dir / f"{dataset_name}_model.pt"
         scaler_path = self.models_dir / f"{dataset_name}_scaler.pkl"
         encoder_path = self.models_dir / f"{dataset_name}_encoder.pkl"
         
-        joblib.dump(clf, model_path)
+        # Save PyTorch model
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'model_architecture': {
+                'input_dim': model.layers[0].in_features,
+                'hidden_dim': model.layers[0].out_features,
+                'num_classes': model.layers[-1].out_features
+            }
+        }, model_path)
+        
+        # Save preprocessors
         joblib.dump(self.scaler, scaler_path)
         joblib.dump(self.label_encoder, encoder_path)
         
         logger.info(f"Model saved to {model_path}")
+        logger.info(f"Scaler saved to {scaler_path}")
+        logger.info(f"Encoder saved to {encoder_path}")
     
-    def train_all_classifiers(
-        self,
-        dataset_name: str,
-        classifier_types: List[str] = ['svm', 'rf', 'mlp', 'lr']
-    ) -> Dict[str, Dict[str, float]]:
+    def train_emotion_classifier(self) -> Dict[str, Any]:
         """
-        Train all classifier types on a dataset.
+        Train emotion classifier on IEMOCAP embeddings.
         
-        Args:
-            dataset_name: Name of the dataset
-            classifier_types: List of classifier types to train
-            
         Returns:
-            Dictionary of results for each classifier
+            Dictionary of training results
         """
+        logger.info("\n" + "="*60)
+        logger.info("Training Emotion Classifier (MLP)")
+        logger.info("="*60)
+        
         # Load data
-        embeddings, labels = self.load_dataset(dataset_name)
+        embeddings, labels = self.load_dataset('emotion')
         data_splits = self.prepare_data(embeddings, labels)
         
-        results = {}
+        # Get number of classes
+        num_classes = len(np.unique(data_splits['y_train']))
+        logger.info(f"Number of emotion classes: {num_classes}")
+        logger.info(f"Classes: {self.label_encoder.classes_}")
         
-        # Train each classifier
-        for clf_type in classifier_types:
-            clf = self.train_classifier(
-                data_splits['X_train'],
-                data_splits['y_train'],
-                clf_type
-            )
-            
-            # Evaluate
-            metrics = self.evaluate_classifier(
-                clf,
-                data_splits['X_test'],
-                data_splits['y_test'],
-                dataset_name,
-                clf_type
-            )
-            
-            # Save model
-            self.save_model(clf, dataset_name, clf_type)
-            
-            results[clf_type] = metrics
+        # Train MLP
+        model = self.train_mlp(
+            data_splits['X_train'],
+            data_splits['y_train'],
+            data_splits['X_val'],
+            data_splits['y_val'],
+            num_classes,
+            hidden_dim=128,
+            epochs=50,
+            lr=0.001
+        )
+        
+        # Evaluate
+        results = self.evaluate_classifier(
+            model,
+            data_splits['X_test'],
+            data_splits['y_test']
+        )
+        
+        # Save model
+        self.save_model(model, 'emotion')
         
         return results
 
@@ -363,21 +387,13 @@ class ClassifierTrainer:
 if __name__ == "__main__":
     trainer = ClassifierTrainer()
     
-    # Train classifiers on all datasets
-    datasets = ['iemocap', 'librispeech', 'slurp', 'commonvoice']
-    
-    all_results = {}
-    for dataset in datasets:
-        try:
-            logger.info(f"\n{'='*60}")
-            logger.info(f"Training classifiers for {dataset}")
-            logger.info(f"{'='*60}")
-            
-            results = trainer.train_all_classifiers(dataset)
-            all_results[dataset] = results
-        except FileNotFoundError as e:
-            logger.warning(f"Skipping {dataset}: {e}")
-        except Exception as e:
-            logger.error(f"Error processing {dataset}: {e}")
-    
-    logger.info("\nTraining complete!")
+    try:
+        results = trainer.train_emotion_classifier()
+        logger.info("\n✓ Training complete!")
+    except FileNotFoundError as e:
+        logger.error(f"✗ {e}")
+        logger.error("Please run feature extraction first (2_wavlm_feature_extraction.py)")
+    except Exception as e:
+        logger.error(f"✗ Error during training: {e}")
+        import traceback
+        traceback.print_exc()

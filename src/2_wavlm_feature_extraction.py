@@ -3,13 +3,7 @@ WavLM Feature Extraction Script
 =================================
 
 This script extracts fixed-dimensional speech embeddings using the WavLM-base model.
-WavLM is a self-supervised learning model pre-trained on large-scale unlabeled speech data.
-
-The extracted embeddings can be used for various downstream tasks:
-- Emotion Identification
-- Gender Identification
-- Intent Identification
-- Cross-language Embeddings
+Optimized for CPU-only execution with small batch processing.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -17,16 +11,6 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
-
-TODO (Inthiyaz - Model Architect): Main responsibilities
-- Experiment with different WavLM model variants (base, base-plus, large)
-- Implement multi-layer feature fusion strategies
-- Optimize pooling methods (mean, max, attention-based)
-- Add audio augmentation techniques for robustness
-- Implement efficient batch processing for large datasets
-- Design the embedding extraction pipeline architecture
-- Compare WavLM with other models (Wav2Vec2, HuBERT)
-- Optimize model loading and inference for GPU/CPU
 """
 
 import os
@@ -50,11 +34,10 @@ logger = logging.getLogger(__name__)
 
 class WavLMFeatureExtractor:
     """
-    Extract speech embeddings using WavLM-base model.
+    Extract speech embeddings using WavLM-base model (CPU-optimized).
     
     The WavLM model generates contextual representations from raw audio.
-    We extract features from multiple layers and use pooling strategies
-    to create fixed-dimensional embeddings.
+    We extract features from the last layer and use mean pooling.
     """
     
     def __init__(
@@ -68,16 +51,17 @@ class WavLMFeatureExtractor:
         
         Args:
             model_name: HuggingFace model identifier
-            device: Device to run model on (cuda/cpu)
+            device: Device to run model on (cpu only for this setup)
             embeddings_dir: Directory to save extracted embeddings
         """
         self.model_name = model_name
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        # Force CPU usage for compatibility
+        self.device = "cpu"
         self.embeddings_dir = Path(embeddings_dir)
         self.embeddings_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info(f"Loading WavLM model: {model_name}")
-        logger.info(f"Using device: {self.device}")
+        logger.info(f"Using device: {self.device} (CPU-only mode)")
         
         # Load model and processor
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
@@ -85,7 +69,11 @@ class WavLMFeatureExtractor:
         self.model.to(self.device)
         self.model.eval()
         
+        # Disable gradient computation for inference
+        torch.set_grad_enabled(False)
+        
         logger.info("WavLM model loaded successfully")
+        logger.info(f"Model will run on CPU with optimized batch processing")
     
     def load_audio(self, filepath: str, target_sr: int = 16000) -> torch.Tensor:
         """
@@ -199,19 +187,20 @@ class WavLMFeatureExtractor:
         dataset_name: str,
         layer: int = -1,
         pooling: str = "mean",
-        batch_size: int = 32
+        batch_size: int = 1
     ):
         """
-        Process entire dataset and save embeddings.
+        Process entire dataset and save embeddings (CPU-optimized).
         
         Args:
             metadata_path: Path to metadata CSV file
             dataset_name: Name of the dataset
             layer: Which transformer layer to use
             pooling: Pooling strategy
-            batch_size: Batch size for processing
+            batch_size: Batch size for processing (1 for CPU to avoid memory issues)
         """
         logger.info(f"Processing dataset: {dataset_name}")
+        logger.info(f"Batch size: {batch_size} (optimized for CPU)")
         
         # Load metadata
         df = pd.read_csv(metadata_path)
@@ -220,24 +209,18 @@ class WavLMFeatureExtractor:
         embeddings = []
         labels = []
         
-        # Process each audio file
+        # Process each audio file (one at a time for CPU efficiency)
         for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Extracting {dataset_name}"):
             try:
                 filepath = row['filepath']
                 embedding = self.extract_from_file(filepath, layer=layer, pooling=pooling)
                 embeddings.append(embedding)
                 
-                # Store label (dataset-specific)
+                # Store label (emotion for IEMOCAP)
                 if 'emotion' in row:
                     labels.append(row['emotion'])
-                elif 'speaker_id' in row:
-                    labels.append(row['speaker_id'])
-                elif 'intent' in row:
-                    labels.append(row['intent'])
-                elif 'language' in row:
-                    labels.append(row['language'])
                 else:
-                    labels.append(None)
+                    labels.append('unknown')
                 
             except Exception as e:
                 logger.warning(f"Skipping {filepath}: {e}")
@@ -247,16 +230,15 @@ class WavLMFeatureExtractor:
         embeddings = np.array(embeddings)
         labels = np.array(labels)
         
-        # Save embeddings
-        output_path = self.embeddings_dir / f"{dataset_name}_embeddings.npy"
-        labels_path = self.embeddings_dir / f"{dataset_name}_labels.npy"
+        # Save embeddings as NPZ file (compressed)
+        output_path = self.embeddings_dir / f"{dataset_name}_embeddings.npz"
         
-        np.save(output_path, embeddings)
-        np.save(labels_path, labels)
+        np.savez_compressed(output_path, embeddings=embeddings, labels=labels)
         
         logger.info(f"Saved embeddings to {output_path}")
-        logger.info(f"Saved labels to {labels_path}")
         logger.info(f"Embedding shape: {embeddings.shape}")
+        logger.info(f"Labels shape: {labels.shape}")
+        logger.info(f"Unique labels: {np.unique(labels)}")
     
     def extract_multi_layer(
         self,
@@ -285,56 +267,23 @@ class WavLMFeatureExtractor:
 
 
 if __name__ == "__main__":
-    # Example usage
+    # CPU-optimized feature extraction for IEMOCAP
+    logger.info("Starting WavLM feature extraction (CPU mode)")
     extractor = WavLMFeatureExtractor()
     
-    # Sample feature extraction function
-    def sample_feature_extraction(audio_file_path: str):
-        """
-        Sample feature extraction function demonstrating how to use WavLM.
-        
-        This function shows a complete workflow of:
-        1. Loading an audio file
-        2. Extracting embeddings using WavLM-base
-        3. Returning a fixed-dimensional representation
-        
-        Args:
-            audio_file_path: Path to the audio file (.wav, .flac, etc.)
-            
-        Returns:
-            numpy array: 768-dimensional embedding vector
-            
-        Example:
-            >>> embedding = sample_feature_extraction("sample_audio.wav")
-            >>> print(f"Embedding shape: {embedding.shape}")
-            Embedding shape: (768,)
-        """
-        logger.info(f"Extracting features from: {audio_file_path}")
-        
-        # Extract embedding with default settings
-        # - Uses last layer (-1) of WavLM transformer
-        # - Applies mean pooling over time dimension
-        embedding = extractor.extract_from_file(
-            filepath=audio_file_path,
-            layer=-1,        # Last transformer layer
-            pooling="mean"   # Mean pooling strategy
+    # Process IEMOCAP dataset only
+    metadata_path = '../data/processed/iemocap_metadata.csv'
+    
+    if Path(metadata_path).exists():
+        logger.info(f"Found metadata file: {metadata_path}")
+        extractor.process_dataset(
+            metadata_path, 
+            'emotion',
+            batch_size=1  # Process one sample at a time for CPU
         )
-        
-        logger.info(f"Extraction complete. Embedding dimension: {embedding.shape[0]}")
-        return embedding
+        logger.info("✓ Feature extraction complete!")
+    else:
+        logger.error(f"✗ Metadata file not found: {metadata_path}")
+        logger.error("Please run 1_data_preprocessing.py first")
     
-    # Process datasets
-    datasets = {
-        'iemocap': '../data/processed/iemocap_metadata.csv',
-        'librispeech': '../data/processed/librispeech_metadata.csv',
-        'slurp': '../data/processed/slurp_metadata.csv',
-        'commonvoice': '../data/processed/commonvoice_metadata.csv'
-    }
-    
-    for dataset_name, metadata_path in datasets.items():
-        if Path(metadata_path).exists():
-            extractor.process_dataset(metadata_path, dataset_name)
-        else:
-            logger.warning(f"Metadata file not found: {metadata_path}")
-    
-    logger.info("Feature extraction complete!")
+    logger.info("All done!")

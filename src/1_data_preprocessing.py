@@ -2,11 +2,8 @@
 Data Preprocessing Script for Speech Embeddings using WavLM-base
 ==================================================================
 
-This script handles the preprocessing of multiple speech datasets:
-- IEMOCAP (emotion recognition)
-- LibriSpeech (speaker recognition)
-- SLURP (intent classification)
-- CommonVoice (language/accent classification)
+This script handles the preprocessing of IEMOCAP dataset for emotion recognition.
+Optimized for CPU-only execution with small dataset subset.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -21,9 +18,10 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, List, Tuple
-import librosa
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from datasets import load_dataset
 
 # Configure logging
 logging.basicConfig(
@@ -35,10 +33,9 @@ logger = logging.getLogger(__name__)
 
 class DataPreprocessor:
     """
-    Preprocesses speech datasets for embedding extraction.
+    Preprocesses IEMOCAP dataset for emotion recognition (CPU-optimized).
     
-    Handles loading, validation, and normalization of audio files
-    from various speech datasets.
+    Loads data from HuggingFace and filters to 4 emotion classes.
     """
     
     def __init__(self, data_dir: str = "../data", output_dir: str = "../data/processed"):
@@ -56,142 +53,100 @@ class DataPreprocessor:
         # Standard sampling rate for WavLM
         self.target_sr = 16000
         
+        # Emotion mapping for 4 classes
+        self.emotion_map = {
+            'neu': 'neutral',
+            'neutral': 'neutral',
+            'hap': 'happy',
+            'happy': 'happy',
+            'sad': 'sad',
+            'ang': 'angry',
+            'angry': 'angry',
+        }
+        
         logger.info(f"DataPreprocessor initialized with data_dir: {data_dir}")
+        logger.info(f"Target emotions: {list(set(self.emotion_map.values()))}")
     
-    def load_audio(self, filepath: str) -> Tuple[np.ndarray, int]:
+    def preprocess_iemocap(self, subset_percent: float = 5.0) -> pd.DataFrame:
         """
-        Load and resample audio file.
+        Preprocess IEMOCAP dataset for emotion recognition using HuggingFace.
         
         Args:
-            filepath: Path to audio file
-            
-        Returns:
-            Tuple of (audio_array, sample_rate)
-        """
-        try:
-            audio, sr = librosa.load(filepath, sr=self.target_sr)
-            return audio, sr
-        except Exception as e:
-            logger.error(f"Error loading {filepath}: {e}")
-            raise
-    
-    def preprocess_iemocap(self) -> pd.DataFrame:
-        """
-        Preprocess IEMOCAP dataset for emotion recognition.
+            subset_percent: Percentage of training data to use (default: 5%)
         
         Returns:
             DataFrame with columns: [filepath, emotion, speaker, session]
         """
-        logger.info("Preprocessing IEMOCAP dataset...")
+        logger.info("Loading IEMOCAP dataset from HuggingFace...")
+        logger.info(f"Using {subset_percent}% of training data for CPU efficiency")
         
-        iemocap_path = self.data_dir / "IEMOCAP"
-        if not iemocap_path.exists():
-            logger.warning(f"IEMOCAP dataset not found at {iemocap_path}")
+        try:
+            # Load IEMOCAP from HuggingFace datasets
+            # Using a small subset for CPU processing
+            dataset = load_dataset("Zahra99/IEMOCAP", split=f"train[:{subset_percent}%]")
+            
+            logger.info(f"Loaded {len(dataset)} samples from IEMOCAP")
+            
+            data_entries = []
+            
+            # Process each sample
+            for idx, sample in enumerate(tqdm(dataset, desc="Processing IEMOCAP")):
+                # Get emotion label
+                emotion_raw = sample.get('label', sample.get('emotion', 'unknown'))
+                
+                # Handle numeric labels (convert to string)
+                if isinstance(emotion_raw, int):
+                    # IEMOCAP label mapping (common encoding)
+                    label_names = ['neutral', 'happy', 'sad', 'angry', 'frustrated', 'excited', 'fearful', 'surprised']
+                    if 0 <= emotion_raw < len(label_names):
+                        emotion_raw = label_names[emotion_raw]
+                    else:
+                        emotion_raw = 'unknown'
+                
+                # Normalize emotion to lowercase
+                emotion_normalized = str(emotion_raw).lower().strip()
+                
+                # Map to 4 target emotions
+                if emotion_normalized in self.emotion_map:
+                    emotion = self.emotion_map[emotion_normalized]
+                elif emotion_normalized in ['exc', 'excited']:
+                    # Map excited to happy
+                    emotion = 'happy'
+                else:
+                    # Skip other emotions
+                    continue
+                
+                # Save audio to temporary location
+                audio_data = sample['audio']
+                audio_path = self.data_dir / f"temp_audio_{idx}.wav"
+                
+                # Save audio array to file
+                import soundfile as sf
+                sf.write(str(audio_path), audio_data['array'], audio_data['sampling_rate'])
+                
+                data_entries.append({
+                    'filepath': str(audio_path),
+                    'emotion': emotion,
+                    'speaker': sample.get('speaker_id', f'speaker_{idx}'),
+                    'session': sample.get('session', 'session_1'),
+                    'sampling_rate': audio_data['sampling_rate']
+                })
+            
+            df = pd.DataFrame(data_entries)
+            
+            # Log emotion distribution
+            if not df.empty:
+                logger.info(f"\nEmotion distribution:")
+                for emotion, count in df['emotion'].value_counts().items():
+                    logger.info(f"  {emotion}: {count} samples")
+            
+            logger.info(f"IEMOCAP preprocessing complete. {len(df)} samples processed.")
+            return df
+            
+        except Exception as e:
+            logger.error(f"Error loading IEMOCAP from HuggingFace: {e}")
+            logger.info("Falling back to empty dataset...")
             return pd.DataFrame()
-        
-        # Implementation placeholder
-        # In production, parse IEMOCAP session files and extract metadata
-        data_entries = []
-        
-        # TODO (Teammate A - Data Engineer): Implement IEMOCAP-specific preprocessing
-        # Task: Emotion Identification (IEMOCAP)
-        # - Parse session folders (Session1-5)
-        # - Extract emotion labels from evaluation transcription files (*.txt)
-        # - Map emotions to standard labels: neutral, happy, sad, angry, frustrated, excited, fearful, surprised
-        # - Validate audio files (.wav) exist and are readable
-        # - Create DataFrame with columns: [filepath, emotion, speaker, session]
-        # - Filter out any corrupted or missing audio files
-        
-        logger.info(f"IEMOCAP preprocessing complete. {len(data_entries)} samples processed.")
-        return pd.DataFrame(data_entries)
-    
-    def preprocess_librispeech(self) -> pd.DataFrame:
-        """
-        Preprocess LibriSpeech dataset for gender identification.
-        
-        Returns:
-            DataFrame with columns: [filepath, gender, speaker_id, chapter, text]
-        """
-        logger.info("Preprocessing LibriSpeech dataset...")
-        
-        librispeech_path = self.data_dir / "LibriSpeech"
-        if not librispeech_path.exists():
-            logger.warning(f"LibriSpeech dataset not found at {librispeech_path}")
-            return pd.DataFrame()
-        
-        # Implementation placeholder
-        data_entries = []
-        
-        # TODO (Teammate A - Data Engineer): Implement LibriSpeech-specific preprocessing
-        # Task: Gender Identification (LibriSpeech)
-        # - Parse the directory structure: subset/speaker_id/chapter_id/*.flac
-        # - Read SPEAKERS.TXT to get gender labels (M/F) for each speaker
-        # - Extract transcriptions from .trans.txt files in each chapter
-        # - Create DataFrame with columns: [filepath, gender, speaker_id, chapter, text]
-        # - Ensure balanced representation of male/female speakers
-        # - Validate all audio files are accessible
-        
-        logger.info(f"LibriSpeech preprocessing complete. {len(data_entries)} samples processed.")
-        return pd.DataFrame(data_entries)
-    
-    def preprocess_slurp(self) -> pd.DataFrame:
-        """
-        Preprocess SLURP dataset for intent identification.
-        
-        Returns:
-            DataFrame with columns: [filepath, intent, scenario, action]
-        """
-        logger.info("Preprocessing SLURP dataset...")
-        
-        slurp_path = self.data_dir / "SLURP"
-        if not slurp_path.exists():
-            logger.warning(f"SLURP dataset not found at {slurp_path}")
-            return pd.DataFrame()
-        
-        # Implementation placeholder
-        data_entries = []
-        
-        # TODO (Teammate A - Data Engineer): Implement SLURP-specific preprocessing
-        # Task: Intent Identification (SLURP)
-        # - Load JSON annotation files (train.jsonl, dev.jsonl, test.jsonl)
-        # - Parse intent labels from the 'intent' field (18 different intents)
-        # - Extract scenario and action information
-        # - Match audio files from slurp_real/ and slurp_synth/ directories
-        # - Create DataFrame with columns: [filepath, intent, scenario, action, text]
-        # - Handle both real and synthetic audio appropriately
-        
-        logger.info(f"SLURP preprocessing complete. {len(data_entries)} samples processed.")
-        return pd.DataFrame(data_entries)
-    
-    def preprocess_commonvoice(self) -> pd.DataFrame:
-        """
-        Preprocess CommonVoice dataset for cross-language embedding analysis.
-        
-        Returns:
-            DataFrame with columns: [filepath, language, accent, gender, age]
-        """
-        logger.info("Preprocessing CommonVoice dataset...")
-        
-        cv_path = self.data_dir / "CommonVoice"
-        if not cv_path.exists():
-            logger.warning(f"CommonVoice dataset not found at {cv_path}")
-            return pd.DataFrame()
-        
-        # Implementation placeholder
-        data_entries = []
-        
-        # TODO (Teammate A - Data Engineer): Implement CommonVoice-specific preprocessing
-        # Task: Cross-language Embeddings (English + Hindi)
-        # - Focus on English and Hindi language subsets
-        # - Parse validated.tsv or train.tsv files from each language folder
-        # - Extract columns: path, sentence, client_id, gender, age, accent
-        # - Map audio paths from clips/ directory
-        # - Create DataFrame with columns: [filepath, language, accent, gender, age]
-        # - Ensure balanced samples from both English and Hindi
-        # - Filter for high-quality validated samples only
-        
-        logger.info(f"CommonVoice preprocessing complete. {len(data_entries)} samples processed.")
-        return pd.DataFrame(data_entries)
     
     def validate_dataset(self, df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
         """
@@ -238,29 +193,24 @@ class DataPreprocessor:
     
     def run_all(self):
         """
-        Run preprocessing for all datasets.
+        Run preprocessing for IEMOCAP dataset only.
         """
-        logger.info("Starting preprocessing for all datasets...")
+        logger.info("Starting preprocessing for IEMOCAP dataset...")
         
-        # Process each dataset
-        datasets = {
-            'iemocap': self.preprocess_iemocap,
-            'librispeech': self.preprocess_librispeech,
-            'slurp': self.preprocess_slurp,
-            'commonvoice': self.preprocess_commonvoice
-        }
+        # Process IEMOCAP with 5% subset
+        df = self.preprocess_iemocap(subset_percent=5.0)
+        df = self.validate_dataset(df, 'iemocap')
         
-        for name, preprocess_func in datasets.items():
-            df = preprocess_func()
-            df = self.validate_dataset(df, name)
-            if not df.empty:
-                self.save_metadata(df, name)
+        if not df.empty:
+            self.save_metadata(df, 'iemocap')
+            logger.info(f"✓ Successfully preprocessed {len(df)} IEMOCAP samples")
+        else:
+            logger.error("✗ No IEMOCAP samples were processed")
         
-        logger.info("All preprocessing complete!")
+        logger.info("Preprocessing complete!")
 
 
 if __name__ == "__main__":
-    import numpy as np
     
     # Initialize and run preprocessor
     preprocessor = DataPreprocessor()
