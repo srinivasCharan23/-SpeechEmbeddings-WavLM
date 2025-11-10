@@ -1,17 +1,7 @@
 {
-  "name": "Speech Embedding DevContainer with GPU",
+  "name": "Speech Embedding DevContainer (CPU)",
   "image": "mcr.microsoft.com/devcontainers/python:3.10",
-  "features": {
-    "ghcr.io/devcontainers/features/nvidia-cuda:1": {
-      "installCudnn": true
-    }
-  },
-  "hostRequirements": {
-    "gpu": "optional"
-  },
-  "runArgs": [
-    "--gpus=all"
-  ],
+  "features": {},
   "customizations": {
     "vscode": {
       "settings": {
