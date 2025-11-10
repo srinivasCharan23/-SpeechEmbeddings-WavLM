@@ -93,20 +93,24 @@ class DataPreprocessor:
         # In production, parse IEMOCAP session files and extract metadata
         data_entries = []
         
-        # TODO: Implement IEMOCAP-specific preprocessing
-        # - Parse session folders
-        # - Extract emotion labels from transcription files
-        # - Validate audio files
+        # TODO (Teammate A - Data Engineer): Implement IEMOCAP-specific preprocessing
+        # Task: Emotion Identification (IEMOCAP)
+        # - Parse session folders (Session1-5)
+        # - Extract emotion labels from evaluation transcription files (*.txt)
+        # - Map emotions to standard labels: neutral, happy, sad, angry, frustrated, excited, fearful, surprised
+        # - Validate audio files (.wav) exist and are readable
+        # - Create DataFrame with columns: [filepath, emotion, speaker, session]
+        # - Filter out any corrupted or missing audio files
         
         logger.info(f"IEMOCAP preprocessing complete. {len(data_entries)} samples processed.")
         return pd.DataFrame(data_entries)
     
     def preprocess_librispeech(self) -> pd.DataFrame:
         """
-        Preprocess LibriSpeech dataset for speaker recognition.
+        Preprocess LibriSpeech dataset for gender identification.
         
         Returns:
-            DataFrame with columns: [filepath, speaker_id, chapter, text]
+            DataFrame with columns: [filepath, gender, speaker_id, chapter, text]
         """
         logger.info("Preprocessing LibriSpeech dataset...")
         
@@ -118,17 +122,21 @@ class DataPreprocessor:
         # Implementation placeholder
         data_entries = []
         
-        # TODO: Implement LibriSpeech-specific preprocessing
-        # - Parse speaker/chapter structure
-        # - Extract transcriptions
-        # - Validate audio files
+        # TODO (Teammate A - Data Engineer): Implement LibriSpeech-specific preprocessing
+        # Task: Gender Identification (LibriSpeech)
+        # - Parse the directory structure: subset/speaker_id/chapter_id/*.flac
+        # - Read SPEAKERS.TXT to get gender labels (M/F) for each speaker
+        # - Extract transcriptions from .trans.txt files in each chapter
+        # - Create DataFrame with columns: [filepath, gender, speaker_id, chapter, text]
+        # - Ensure balanced representation of male/female speakers
+        # - Validate all audio files are accessible
         
         logger.info(f"LibriSpeech preprocessing complete. {len(data_entries)} samples processed.")
         return pd.DataFrame(data_entries)
     
     def preprocess_slurp(self) -> pd.DataFrame:
         """
-        Preprocess SLURP dataset for intent classification.
+        Preprocess SLURP dataset for intent identification.
         
         Returns:
             DataFrame with columns: [filepath, intent, scenario, action]
@@ -143,17 +151,21 @@ class DataPreprocessor:
         # Implementation placeholder
         data_entries = []
         
-        # TODO: Implement SLURP-specific preprocessing
-        # - Parse JSON annotations
-        # - Extract intent labels
-        # - Validate audio files
+        # TODO (Teammate A - Data Engineer): Implement SLURP-specific preprocessing
+        # Task: Intent Identification (SLURP)
+        # - Load JSON annotation files (train.jsonl, dev.jsonl, test.jsonl)
+        # - Parse intent labels from the 'intent' field (18 different intents)
+        # - Extract scenario and action information
+        # - Match audio files from slurp_real/ and slurp_synth/ directories
+        # - Create DataFrame with columns: [filepath, intent, scenario, action, text]
+        # - Handle both real and synthetic audio appropriately
         
         logger.info(f"SLURP preprocessing complete. {len(data_entries)} samples processed.")
         return pd.DataFrame(data_entries)
     
     def preprocess_commonvoice(self) -> pd.DataFrame:
         """
-        Preprocess CommonVoice dataset for language/accent classification.
+        Preprocess CommonVoice dataset for cross-language embedding analysis.
         
         Returns:
             DataFrame with columns: [filepath, language, accent, gender, age]
@@ -168,10 +180,15 @@ class DataPreprocessor:
         # Implementation placeholder
         data_entries = []
         
-        # TODO: Implement CommonVoice-specific preprocessing
-        # - Parse TSV metadata files
-        # - Extract language/accent labels
-        # - Validate audio files
+        # TODO (Teammate A - Data Engineer): Implement CommonVoice-specific preprocessing
+        # Task: Cross-language Embeddings (English + Hindi)
+        # - Focus on English and Hindi language subsets
+        # - Parse validated.tsv or train.tsv files from each language folder
+        # - Extract columns: path, sentence, client_id, gender, age, accent
+        # - Map audio paths from clips/ directory
+        # - Create DataFrame with columns: [filepath, language, accent, gender, age]
+        # - Ensure balanced samples from both English and Hindi
+        # - Filter for high-quality validated samples only
         
         logger.info(f"CommonVoice preprocessing complete. {len(data_entries)} samples processed.")
         return pd.DataFrame(data_entries)

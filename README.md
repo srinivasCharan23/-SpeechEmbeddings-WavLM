@@ -6,10 +6,10 @@ A research-based project implementing speech embedding extraction and evaluation
 
 This project extracts fixed-dimensional speech representations from raw audio using the self-supervised WavLM model and evaluates them on multiple downstream tasks:
 
-- **Emotion Recognition** (IEMOCAP dataset)
-- **Speaker Identification** (LibriSpeech dataset)
-- **Intent Classification** (SLURP dataset)
-- **Language/Accent Classification** (CommonVoice dataset)
+- **Emotion Identification** (IEMOCAP dataset)
+- **Gender Identification** (LibriSpeech dataset)
+- **Intent Identification** (SLURP dataset)
+- **Cross-language Embeddings** (CommonVoice English + Hindi)
 
 ## 📁 Project Structure
 
@@ -162,10 +162,10 @@ Outputs:
 
 | Task | Dataset | Metric | Classes |
 |------|---------|--------|---------|
-| Emotion Recognition | IEMOCAP | Weighted F1 | 4-8 emotions |
-| Speaker ID | LibriSpeech | Accuracy | 100+ speakers |
-| Intent Classification | SLURP | Macro F1 | 18 intents |
-| Language/Accent | CommonVoice | Accuracy | Multiple languages |
+| Emotion Identification | IEMOCAP | Weighted F1 | 4-8 emotions |
+| Gender Identification | LibriSpeech | Accuracy | Male/Female |
+| Intent Identification | SLURP | Macro F1 | 18 intents |
+| Cross-language Embeddings | CommonVoice (EN+HI) | Accuracy | English/Hindi |
 
 ## 📈 Results
 
@@ -177,9 +177,15 @@ Results are saved in the `results/` directory:
 - `umap_*.png` - UMAP visualizations
 - `report_*.csv` - Detailed classification reports
 
-## 👥 Team
+## 👥 Team Roles
 
-This project is developed by a 5-member AI/ML research team focused on speech processing and representation learning.
+This project is developed by a 5-member AI/ML research team focused on speech processing and representation learning:
+
+- **Inthiyaz** - Model Architect (WavLM embedding & pipeline design)
+- **Teammate A** - Data Engineer (dataset preparation and preprocessing)
+- **Teammate B** - Trainer (Emotion & Gender classification model training)
+- **Teammate C** - Evaluator (metrics computation and performance analysis)
+- **Teammate D** - Visualizer (UMAP visualizations and results presentation)
 
 ## 📝 Citation
 

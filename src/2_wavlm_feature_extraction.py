@@ -6,10 +6,10 @@ This script extracts fixed-dimensional speech embeddings using the WavLM-base mo
 WavLM is a self-supervised learning model pre-trained on large-scale unlabeled speech data.
 
 The extracted embeddings can be used for various downstream tasks:
-- Emotion recognition
-- Speaker identification
-- Intent classification
-- Language/accent classification
+- Emotion Identification
+- Gender Identification
+- Intent Identification
+- Cross-language Embeddings
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -17,6 +17,16 @@ of Speech Embedding Techniques'
 
 Author: AI/ML Team
 Date: 2024
+
+TODO (Inthiyaz - Model Architect): Main responsibilities
+- Experiment with different WavLM model variants (base, base-plus, large)
+- Implement multi-layer feature fusion strategies
+- Optimize pooling methods (mean, max, attention-based)
+- Add audio augmentation techniques for robustness
+- Implement efficient batch processing for large datasets
+- Design the embedding extraction pipeline architecture
+- Compare WavLM with other models (Wav2Vec2, HuBERT)
+- Optimize model loading and inference for GPU/CPU
 """
 
 import os
@@ -277,6 +287,41 @@ class WavLMFeatureExtractor:
 if __name__ == "__main__":
     # Example usage
     extractor = WavLMFeatureExtractor()
+    
+    # Sample feature extraction function
+    def sample_feature_extraction(audio_file_path: str):
+        """
+        Sample feature extraction function demonstrating how to use WavLM.
+        
+        This function shows a complete workflow of:
+        1. Loading an audio file
+        2. Extracting embeddings using WavLM-base
+        3. Returning a fixed-dimensional representation
+        
+        Args:
+            audio_file_path: Path to the audio file (.wav, .flac, etc.)
+            
+        Returns:
+            numpy array: 768-dimensional embedding vector
+            
+        Example:
+            >>> embedding = sample_feature_extraction("sample_audio.wav")
+            >>> print(f"Embedding shape: {embedding.shape}")
+            Embedding shape: (768,)
+        """
+        logger.info(f"Extracting features from: {audio_file_path}")
+        
+        # Extract embedding with default settings
+        # - Uses last layer (-1) of WavLM transformer
+        # - Applies mean pooling over time dimension
+        embedding = extractor.extract_from_file(
+            filepath=audio_file_path,
+            layer=-1,        # Last transformer layer
+            pooling="mean"   # Mean pooling strategy
+        )
+        
+        logger.info(f"Extraction complete. Embedding dimension: {embedding.shape[0]}")
+        return embedding
     
     # Process datasets
     datasets = {
