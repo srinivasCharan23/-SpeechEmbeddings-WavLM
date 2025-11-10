@@ -1,6 +1,0 @@
-{
-  "name": "Speech Embedding DevContainer",
-  "image": "mcr.microsoft.com/devcontainers/python:3.10",
-  "features": {},
-  "postCreateCommand": "pip install -r requirements.txt"
-}
