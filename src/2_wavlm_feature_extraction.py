@@ -199,19 +199,21 @@ class WavLMFeatureExtractor:
         dataset_name: str,
         layer: int = -1,
         pooling: str = "mean",
-        batch_size: int = 32
+        batch_size: int = 8
     ):
         """
         Process entire dataset and save embeddings.
+        Optimized for CPU-only processing with batch processing.
         
         Args:
             metadata_path: Path to metadata CSV file
             dataset_name: Name of the dataset
             layer: Which transformer layer to use
             pooling: Pooling strategy
-            batch_size: Batch size for processing
+            batch_size: Batch size for processing (reduced for CPU)
         """
         logger.info(f"Processing dataset: {dataset_name}")
+        logger.info(f"Device: {self.device} | Batch size: {batch_size}")
         
         # Load metadata
         df = pd.read_csv(metadata_path)
@@ -219,11 +221,19 @@ class WavLMFeatureExtractor:
         
         embeddings = []
         labels = []
+        failed_count = 0
         
-        # Process each audio file
+        # Process each audio file with progress bar
         for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Extracting {dataset_name}"):
             try:
                 filepath = row['filepath']
+                
+                # Skip if file doesn't exist
+                if not Path(filepath).exists():
+                    logger.warning(f"File not found: {filepath}")
+                    failed_count += 1
+                    continue
+                
                 embedding = self.extract_from_file(filepath, layer=layer, pooling=pooling)
                 embeddings.append(embedding)
                 
@@ -239,9 +249,18 @@ class WavLMFeatureExtractor:
                 else:
                     labels.append(None)
                 
+                # Clear CUDA cache periodically if using GPU (not applicable for CPU)
+                if (idx + 1) % batch_size == 0:
+                    import gc
+                    gc.collect()
+                
             except Exception as e:
                 logger.warning(f"Skipping {filepath}: {e}")
+                failed_count += 1
                 continue
+        
+        if failed_count > 0:
+            logger.warning(f"Failed to process {failed_count} files")
         
         # Convert to numpy arrays
         embeddings = np.array(embeddings)
@@ -254,9 +273,10 @@ class WavLMFeatureExtractor:
         np.save(output_path, embeddings)
         np.save(labels_path, labels)
         
-        logger.info(f"Saved embeddings to {output_path}")
-        logger.info(f"Saved labels to {labels_path}")
+        logger.info(f"✅ Saved embeddings to {output_path}")
+        logger.info(f"✅ Saved labels to {labels_path}")
         logger.info(f"Embedding shape: {embeddings.shape}")
+        logger.info(f"Successfully processed: {len(embeddings)}/{len(df)} samples")
     
     def extract_multi_layer(
         self,
@@ -285,8 +305,8 @@ class WavLMFeatureExtractor:
 
 
 if __name__ == "__main__":
-    # Example usage
-    extractor = WavLMFeatureExtractor()
+    # Initialize extractor with CPU-only mode (optimized for Codespaces)
+    extractor = WavLMFeatureExtractor(device="cpu")
     
     # Sample feature extraction function
     def sample_feature_extraction(audio_file_path: str):
@@ -323,18 +343,42 @@ if __name__ == "__main__":
         logger.info(f"Extraction complete. Embedding dimension: {embedding.shape[0]}")
         return embedding
     
-    # Process datasets
+    # Process CREMA-D dataset (primary focus)
+    cremad_metadata = '../data/processed/cremad_subset.csv'
+    if Path(cremad_metadata).exists():
+        logger.info("Processing CREMA-D dataset...")
+        extractor.process_dataset(cremad_metadata, 'cremad')
+        
+        # Save as emotion_embeddings.npz for compatibility
+        embeddings_npy = extractor.embeddings_dir / "cremad_embeddings.npy"
+        labels_npy = extractor.embeddings_dir / "cremad_labels.npy"
+        
+        if embeddings_npy.exists() and labels_npy.exists():
+            embeddings = np.load(embeddings_npy)
+            labels = np.load(labels_npy)
+            
+            # Save as .npz format
+            npz_path = extractor.embeddings_dir / "emotion_embeddings.npz"
+            np.savez(npz_path, embeddings=embeddings, labels=labels)
+            logger.info(f"✅ Also saved as {npz_path}")
+    else:
+        logger.warning(f"CREMA-D metadata not found: {cremad_metadata}")
+        logger.warning("Please run 1_data_preprocessing.py first")
+    
+    # Process other datasets (backward compatibility)
     datasets = {
         'iemocap': '../data/processed/iemocap_metadata.csv',
         'librispeech': '../data/processed/librispeech_metadata.csv',
         'slurp': '../data/processed/slurp_metadata.csv',
-        'commonvoice': '../data/processed/commonvoice_metadata.csv'
+        'commonvoice': '../data/processed/commonvoice_metadata.csv',
+        'ravdess': '../data/processed/ravdess_subset.csv'
     }
     
     for dataset_name, metadata_path in datasets.items():
         if Path(metadata_path).exists():
+            logger.info(f"Processing {dataset_name} dataset...")
             extractor.process_dataset(metadata_path, dataset_name)
         else:
-            logger.warning(f"Metadata file not found: {metadata_path}")
+            logger.debug(f"Metadata file not found: {metadata_path}")
     
     logger.info("Feature extraction complete!")

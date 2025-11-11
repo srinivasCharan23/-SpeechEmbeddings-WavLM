@@ -395,4 +395,11 @@ class UMAPVisualizer:
 
 if __name__ == "__main__":
     visualizer = UMAPVisualizer()
-    visualizer.visualize_all()
+    
+    # Visualize CREMA-D dataset (primary focus)
+    datasets_to_viz = ['cremad']
+    
+    # Also include other datasets if they exist
+    datasets_to_viz.extend(['iemocap', 'librispeech', 'slurp', 'commonvoice', 'ravdess'])
+    
+    visualizer.visualize_all(datasets=datasets_to_viz)

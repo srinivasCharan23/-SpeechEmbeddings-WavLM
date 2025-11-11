@@ -418,4 +418,14 @@ class EvaluationMetrics:
 
 if __name__ == "__main__":
     evaluator = EvaluationMetrics()
-    evaluator.run_full_evaluation()
+    
+    # Evaluate CREMA-D dataset (primary focus)
+    datasets_to_eval = ['cremad']
+    
+    # Also include other datasets if they exist
+    datasets_to_eval.extend(['iemocap', 'librispeech', 'slurp', 'commonvoice', 'ravdess'])
+    
+    # Only evaluate classifiers that were trained (MLP and LR for CPU)
+    classifier_types = ['mlp', 'lr']
+    
+    evaluator.run_full_evaluation(datasets=datasets_to_eval, classifier_types=classifier_types)

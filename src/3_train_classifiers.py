@@ -171,6 +171,7 @@ class ClassifierTrainer:
     def get_classifier(self, classifier_type: str) -> Any:
         """
         Get classifier instance with default hyperparameters.
+        Optimized for CPU-only processing.
         
         Args:
             classifier_type: Type of classifier ('svm', 'rf', 'mlp', 'lr')
@@ -180,14 +181,25 @@ class ClassifierTrainer:
         """
         classifiers = {
             'svm': SVC(kernel='rbf', random_state=self.random_state),
-            'rf': RandomForestClassifier(n_estimators=100, random_state=self.random_state),
-            'mlp': MLPClassifier(
-                hidden_layer_sizes=(256, 128),
-                max_iter=500,
+            'rf': RandomForestClassifier(
+                n_estimators=100, 
                 random_state=self.random_state,
-                early_stopping=True
+                n_jobs=-1  # Use all CPU cores
             ),
-            'lr': LogisticRegression(max_iter=1000, random_state=self.random_state)
+            'mlp': MLPClassifier(
+                hidden_layer_sizes=(128, 64),  # Smaller network for CPU
+                max_iter=300,  # Reduced iterations
+                random_state=self.random_state,
+                early_stopping=True,
+                validation_fraction=0.1,
+                n_iter_no_change=10,
+                verbose=True  # Show progress
+            ),
+            'lr': LogisticRegression(
+                max_iter=1000, 
+                random_state=self.random_state,
+                n_jobs=-1  # Use all CPU cores
+            )
         }
         
         if classifier_type not in classifiers:
@@ -363,8 +375,8 @@ class ClassifierTrainer:
 if __name__ == "__main__":
     trainer = ClassifierTrainer()
     
-    # Train classifiers on all datasets
-    datasets = ['iemocap', 'librispeech', 'slurp', 'commonvoice']
+    # Train classifiers on CREMA-D dataset (primary focus)
+    datasets = ['cremad']
     
     all_results = {}
     for dataset in datasets:
@@ -373,11 +385,32 @@ if __name__ == "__main__":
             logger.info(f"Training classifiers for {dataset}")
             logger.info(f"{'='*60}")
             
-            results = trainer.train_all_classifiers(dataset)
+            # For CPU-only, train only MLP and LR classifiers (faster)
+            # SVM and RF can be very slow on CPU
+            results = trainer.train_all_classifiers(
+                dataset,
+                classifier_types=['mlp', 'lr']
+            )
             all_results[dataset] = results
         except FileNotFoundError as e:
             logger.warning(f"Skipping {dataset}: {e}")
         except Exception as e:
             logger.error(f"Error processing {dataset}: {e}")
     
+    # Also try other datasets if they exist (backward compatibility)
+    other_datasets = ['iemocap', 'librispeech', 'slurp', 'commonvoice', 'ravdess']
+    for dataset in other_datasets:
+        try:
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Training classifiers for {dataset}")
+            logger.info(f"{'='*60}")
+            
+            results = trainer.train_all_classifiers(dataset, classifier_types=['mlp', 'lr'])
+            all_results[dataset] = results
+        except FileNotFoundError as e:
+            logger.debug(f"Skipping {dataset}: {e}")
+        except Exception as e:
+            logger.warning(f"Error processing {dataset}: {e}")
+    
     logger.info("\nTraining complete!")
+    logger.info(f"Trained models for {len(all_results)} dataset(s)")
