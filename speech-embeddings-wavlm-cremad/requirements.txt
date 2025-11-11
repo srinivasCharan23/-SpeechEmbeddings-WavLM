@@ -1,0 +1,8 @@
+pandas
+datasets
+librosa
+soundfile
+numpy
+scikit-learn
+tqdm
+logging
