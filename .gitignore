@@ -42,6 +42,8 @@ data/IEMOCAP/*
 data/LibriSpeech/*
 data/SLURP/*
 data/CommonVoice/*
+data/CREMA-D/*
+data/CREMA-D_synthetic/*
 data/processed/*
 !data/IEMOCAP/.gitkeep
 !data/LibriSpeech/.gitkeep
