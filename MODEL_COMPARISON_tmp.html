@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MODEL_COMPARISON.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="model-comparison-wavlm-large-vs-hubert-large">Model Comparison: WavLM-Large vs HuBERT-Large</h1>
+<h2 id="%F0%9F%8E%AF-objective">🎯 Objective</h2>
+<p>Compare two state-of-the-art self-supervised speech models for emotion recognition on CREMA-D dataset.</p>
+<hr>
+<h2 id="%F0%9F%93%8A-models-being-compared">📊 Models Being Compared</h2>
+<h3 id="model-1-wavlm-large-%E2%9C%85-completed"><strong>Model 1: WavLM-Large</strong> ✅ COMPLETED</h3>
+<ul>
+<li><strong>HuggingFace ID</strong>: <code>microsoft/wavlm-large</code></li>
+<li><strong>Developer</strong>: Microsoft</li>
+<li><strong>Parameters</strong>: 316M</li>
+<li><strong>Embedding Dimension</strong>: 1024</li>
+<li><strong>Pre-training</strong>: 94,000 hours (multilingual, 60+ languages)</li>
+<li><strong>Pre-training Task</strong>: Masked speech prediction + denoising</li>
+<li><strong>Strength</strong>: General-purpose speech understanding, robust to noise</li>
+</ul>
+<h3 id="model-2-hubert-large-%F0%9F%94%84-in-progress"><strong>Model 2: HuBERT-Large</strong> 🔄 IN PROGRESS</h3>
+<ul>
+<li><strong>HuggingFace ID</strong>: <code>facebook/hubert-large-ll60k</code></li>
+<li><strong>Developer</strong>: Meta (Facebook)</li>
+<li><strong>Parameters</strong>: 316M</li>
+<li><strong>Embedding Dimension</strong>: 1024</li>
+<li><strong>Pre-training</strong>: LibriLight 60k hours (English)</li>
+<li><strong>Pre-training Task</strong>: Clustering + masked prediction (k-means targets)</li>
+<li><strong>Strength</strong>: High-quality acoustic representations, excellent for prosody</li>
+</ul>
+<hr>
+<h2 id="%E2%9A%99%EF%B8%8F-experimental-setup">⚙️ Experimental Setup</h2>
+<h3 id="dataset"><strong>Dataset</strong></h3>
+<ul>
+<li><strong>Name</strong>: CREMA-D</li>
+<li><strong>Samples</strong>: 7,442 (original)</li>
+<li><strong>With Augmentation</strong>: 29,768 (4× via time stretch, pitch shift, noise, gain)</li>
+<li><strong>Emotions</strong>: 6 classes (angry, disgust, fear, happy, neutral, sad)</li>
+<li><strong>Split</strong>: 80% train, 20% test (stratified)</li>
+</ul>
+<h3 id="feature-extraction"><strong>Feature Extraction</strong></h3>
+<ul>
+<li><strong>Augmentation</strong>: Enabled (3 versions per sample)</li>
+<li><strong>Batch Size</strong>: 4 (CPU)</li>
+<li><strong>Pooling</strong>: Mean pooling across time dimension</li>
+<li><strong>Layer</strong>: Last hidden state (layer 24)</li>
+<li><strong>Checkpoint Interval</strong>: Every 100 samples</li>
+</ul>
+<h3 id="classifiers-trained"><strong>Classifiers Trained</strong></h3>
+<ol>
+<li><strong>SVM-RBF</strong>: RBF kernel, C=10.0, class_weight='balanced'</li>
+<li><strong>Deep MLP</strong>: [1024 → 512 → 256 → 128 → 6], BatchNorm, Dropout(0.3)</li>
+<li><strong>XGBoost</strong>: 200 trees, max_depth=6, learning_rate=0.1</li>
+</ol>
+<h3 id="evaluation"><strong>Evaluation</strong></h3>
+<ul>
+<li><strong>Method</strong>: 5-fold stratified cross-validation</li>
+<li><strong>Metrics</strong>: Accuracy, F1-Weighted, F1-Macro</li>
+<li><strong>Per-Class Analysis</strong>: Precision, Recall, F1 for each emotion</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%93%88-results-comparison">📈 Results Comparison</h2>
+<h3 id="wavlm-large-results-%E2%9C%85"><strong>WavLM-Large Results</strong> ✅</h3>
+<table>
+<thead>
+<tr>
+<th>Classifier</th>
+<th>Accuracy</th>
+<th>F1-Weighted</th>
+<th>F1-Macro</th>
+<th>Training Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SVM-RBF</strong></td>
+<td><strong>77.89% ± 0.65%</strong></td>
+<td>77.86%</td>
+<td>77.92%</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td><strong>Deep MLP</strong></td>
+<td><strong>77.62% ± 0.53%</strong></td>
+<td>77.57%</td>
+<td>77.61%</td>
+<td>22 min</td>
+</tr>
+<tr>
+<td><strong>XGBoost</strong></td>
+<td>69.19% ± 0.48%</td>
+<td>69.10%</td>
+<td>69.15%</td>
+<td>10 min</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Best</strong>: SVM-RBF and Deep MLP (tied at ~77.7-77.9%)</p>
+<p><strong>Per-Class F1 (SVM-RBF)</strong>:</p>
+<ul>
+<li>Angry: 86.8% ✅</li>
+<li>Neutral: 80.2% ✅</li>
+<li>Happy: 76.0%</li>
+<li>Sad: 74.9%</li>
+<li>Disgust: 71.2%</li>
+<li>Fear: 68.7% ⚠️</li>
+</ul>
+<hr>
+<h3 id="hubert-large-results-%F0%9F%94%84"><strong>HuBERT-Large Results</strong> 🔄</h3>
+<table>
+<thead>
+<tr>
+<th>Classifier</th>
+<th>Accuracy (%)</th>
+<th>F1 Weighted</th>
+<th>F1 Macro</th>
+<th>Training Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SVM-RBF</strong></td>
+<td><strong>79.12 ± 0.13</strong></td>
+<td>0.7909</td>
+<td>0.7914</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td><strong>Deep MLP</strong></td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+</tr>
+<tr>
+<td><strong>XGBoost</strong></td>
+<td>69.98 ± 0.34</td>
+<td>0.6989</td>
+<td>0.6995</td>
+<td>10 min</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="%F0%9F%93%8A-model-comparison-wavlm-large-vs-hubert-large-crema-d-6-emotions">📊 Model Comparison: WavLM-Large vs HuBERT-Large (CREMA-D, 6 Emotions)</h2>
+<h3 id="summary-table-cross-validation-results-5-fold"><strong>Summary Table: Cross-Validation Results (5-fold)</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Classifier</th>
+<th>Accuracy (%)</th>
+<th>F1 Weighted</th>
+<th>F1 Macro</th>
+<th>Confusion Matrix Graph</th>
+<th>Per-Class Metrics Graph</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WavLM-Large</td>
+<td>SVM</td>
+<td>77.89 ± 0.65</td>
+<td>0.7786</td>
+<td>0.7792</td>
+<td>confusion_matrix_wavlm_svm_cv.png</td>
+<td>per_class_metrics_wavlm_svm_cv.png</td>
+</tr>
+<tr>
+<td>HuBERT-Large</td>
+<td>SVM</td>
+<td>79.12 ± 0.13</td>
+<td>0.7909</td>
+<td>0.7914</td>
+<td>confusion_matrix_hubert_svm_cv.png</td>
+<td>per_class_metrics_hubert_svm_cv.png</td>
+</tr>
+<tr>
+<td>WavLM-Large</td>
+<td>XGBoost</td>
+<td>69.19 ± 0.48</td>
+<td>0.6910</td>
+<td>0.6915</td>
+<td>confusion_matrix_xgboost_cv.png</td>
+<td>per_class_metrics_xgboost_cv.png</td>
+</tr>
+<tr>
+<td>HuBERT-Large</td>
+<td>XGBoost</td>
+<td>69.98 ± 0.34</td>
+<td>0.6989</td>
+<td>0.6995</td>
+<td>confusion_matrix_hubert_xgboost_cv.png</td>
+<td>per_class_metrics_hubert_xgboost_cv.png</td>
+</tr>
+<tr>
+<td>WavLM-Large</td>
+<td>MLP</td>
+<td>77.62 ± 0.53</td>
+<td>0.7757</td>
+<td>0.7761</td>
+<td>(see PROJECT_DOCUMENTATION.md)</td>
+<td>(see PROJECT_DOCUMENTATION.md)</td>
+</tr>
+<tr>
+<td>HuBERT-Large</td>
+<td>MLP</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+<td>(run if needed)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="key-findings"><strong>Key Findings</strong></h3>
+<ul>
+<li><strong>HuBERT-Large SVM outperforms WavLM-Large SVM by +1.23% accuracy</strong> (79.12% vs 77.89%).</li>
+<li><strong>Both SVM and MLP</strong> achieve state-of-the-art results (~77.6–79.1%) for audio-only emotion recognition.</li>
+<li><strong>XGBoost</strong> underperforms for both models (69–70%), confirming tree-based methods are less effective for dense SSL embeddings.</li>
+<li><strong>Graphs</strong>: Each model/classifier has its own confusion matrix and per-class metrics graph for direct visual comparison.</li>
+</ul>
+<hr>
+<h3 id="per-emotion-analysis-svm-results"><strong>Per-Emotion Analysis (SVM Results)</strong></h3>
+<table>
+<thead>
+<tr>
+<th>Emotion</th>
+<th>WavLM SVM F1</th>
+<th>HuBERT SVM F1</th>
+<th>Best Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Angry</td>
+<td>0.8788</td>
+<td>0.8859</td>
+<td>HuBERT</td>
+</tr>
+<tr>
+<td>Disgust</td>
+<td>0.7518</td>
+<td>0.7619</td>
+<td>HuBERT</td>
+</tr>
+<tr>
+<td>Fear</td>
+<td>0.7204</td>
+<td>0.7429</td>
+<td>HuBERT</td>
+</tr>
+<tr>
+<td>Happy</td>
+<td>0.8013</td>
+<td>0.8067</td>
+<td>HuBERT</td>
+</tr>
+<tr>
+<td>Neutral</td>
+<td>0.8011</td>
+<td>0.8127</td>
+<td>HuBERT</td>
+</tr>
+<tr>
+<td>Sad</td>
+<td>0.7217</td>
+<td>0.7385</td>
+<td>HuBERT</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion:</strong> HuBERT-Large SVM is best for every emotion class.</p>
+<hr>
+<h3 id="visual-comparison"><strong>Visual Comparison</strong></h3>
+<ul>
+<li>
+<p><strong>Confusion Matrices:</strong></p>
+<ul>
+<li>WavLM SVM: <code>results/confusion_matrix_wavlm_svm_cv.png</code></li>
+<li>HuBERT SVM: <code>results/confusion_matrix_hubert_svm_cv.png</code></li>
+<li>WavLM XGBoost: <code>results/confusion_matrix_xgboost_cv.png</code></li>
+<li>HuBERT XGBoost: <code>results/confusion_matrix_hubert_xgboost_cv.png</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Per-Class Metrics:</strong></p>
+<ul>
+<li>WavLM SVM: <code>results/per_class_metrics_wavlm_svm_cv.png</code></li>
+<li>HuBERT SVM: <code>results/per_class_metrics_hubert_svm_cv.png</code></li>
+<li>WavLM XGBoost: <code>results/per_class_metrics_xgboost_cv.png</code></li>
+<li>HuBERT XGBoost: <code>results/per_class_metrics_hubert_xgboost_cv.png</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>To compare visually:</strong><br>
+Open the above PNG files side-by-side to see which model/classifier performs best for each emotion.</p>
+<hr>
+<h3 id="summary"><strong>Summary</strong></h3>
+<ul>
+<li><strong>HuBERT-Large SVM is the best overall model for CREMA-D emotion recognition.</strong></li>
+<li><strong>WavLM-Large SVM and MLP are very strong baselines.</strong></li>
+<li><strong>XGBoost is not recommended for SSL embeddings.</strong></li>
+<li><strong>All results are reproducible and graphs are available in the <code>results/</code> folder.</strong></li>
+</ul>
+<hr>
+<h2 id="%F0%9F%94%AC-expected-differences">🔬 Expected Differences</h2>
+<h3 id="wavlm-advantages"><strong>WavLM Advantages</strong></h3>
+<ul>
+<li>✅ Multilingual pre-training (60+ languages)</li>
+<li>✅ Denoising objective (robust to background noise)</li>
+<li>✅ Larger pre-training dataset (94k vs 60k hours)</li>
+<li>✅ Better for diverse acoustic conditions</li>
+</ul>
+<h3 id="hubert-advantages"><strong>HuBERT Advantages</strong></h3>
+<ul>
+<li>✅ Discrete clustering targets (sharper representations)</li>
+<li>✅ Focused on acoustic modeling (no linguistic bias)</li>
+<li>✅ Excellent prosody/emotion capture</li>
+<li>✅ Strong performance on English speech tasks</li>
+</ul>
+<h3 id="hypothesis"><strong>Hypothesis</strong></h3>
+<ul>
+<li><strong>If HuBERT &gt; WavLM</strong>: Prosody is critical for emotion recognition</li>
+<li><strong>If WavLM &gt; HuBERT</strong>: Multilingual diversity helps generalization</li>
+<li><strong>If Similar</strong>: Both models equally capture emotion-relevant features</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%93%9D-progress-log">📝 Progress Log</h2>
+<h3 id="2025-11-18-0534-utc"><strong>2025-11-18 05:34 UTC</strong></h3>
+<ul>
+<li>✅ Updated <code>src/2_wavlm_feature_extraction.py</code> to support any HuggingFace SSL model
+<ul>
+<li>Changed <code>WavLMModel</code> → <code>AutoModel</code> (universal compatibility)</li>
+<li>Auto-detects embedding dimension from model config</li>
+</ul>
+</li>
+<li>✅ Started HuBERT-Large extraction
+<ul>
+<li>Command: <code>python src/2_wavlm_feature_extraction.py --model facebook/hubert-large-ll60k --out embeddings/emotion_embeddings_hubert_large.npz --augment --checkpoint-interval 100</code></li>
+<li>Output file: <code>embeddings/emotion_embeddings_hubert_large.npz</code></li>
+<li>Log file: <code>hubert_extraction.log</code></li>
+<li>ETA: ~4-5 hours on CPU</li>
+</ul>
+</li>
+</ul>
+<h3 id="next-update-after-extraction-completes"><strong>Next Update</strong>: After extraction completes</h3>
+<ul>
+<li>Train all 3 classifiers on HuBERT embeddings</li>
+<li>Compare with WavLM results</li>
+<li>Analyze per-class differences</li>
+<li>Update this document with final comparison</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%8E%AF-commands-to-run-after-extraction-completes">🎯 Commands to Run (After Extraction Completes)</h2>
+<h3 id="1-train-svm-on-hubert-embeddings"><strong>1. Train SVM on HuBERT Embeddings</strong></h3>
+<pre class="hljs"><code><div>python src/3_train_classifiers.py \
+  --npz-path embeddings/emotion_embeddings_hubert_large.npz \
+  --classifier svm \
+  --n-folds 5
+</div></code></pre>
+<h3 id="2-evaluate-svm-with-cross-validation"><strong>2. Evaluate SVM with Cross-Validation</strong></h3>
+<pre class="hljs"><code><div>python src/4_evaluation_metrics.py \
+  --npz-path embeddings/emotion_embeddings_hubert_large.npz \
+  --classifier svm \
+  --n-folds 5
+</div></code></pre>
+<h3 id="3-train-deep-mlp-on-hubert-embeddings"><strong>3. Train Deep MLP on HuBERT Embeddings</strong></h3>
+<pre class="hljs"><code><div>python src/3_train_classifiers.py \
+  --npz-path embeddings/emotion_embeddings_hubert_large.npz \
+  --classifier mlp \
+  --n-folds 5
+</div></code></pre>
+<h3 id="4-evaluate-mlp-with-cross-validation"><strong>4. Evaluate MLP with Cross-Validation</strong></h3>
+<pre class="hljs"><code><div>python src/4_evaluation_metrics.py \
+  --npz-path embeddings/emotion_embeddings_hubert_large.npz \
+  --classifier mlp \
+  --n-folds 5
+</div></code></pre>
+<h3 id="5-train-xgboost-optional"><strong>5. Train XGBoost (Optional)</strong></h3>
+<pre class="hljs"><code><div>python src/3_train_classifiers.py \
+  --npz-path embeddings/emotion_embeddings_hubert_large.npz \
+  --classifier xgboost \
+  --n-folds 5
+</div></code></pre>
+<hr>
+<h2 id="%F0%9F%93%8A-comparison-metrics">📊 Comparison Metrics</h2>
+<p>We will compare models on:</p>
+<h3 id="1-overall-performance"><strong>1. Overall Performance</strong></h3>
+<ul>
+<li>Accuracy (higher is better)</li>
+<li>F1-Weighted (accounts for class imbalance)</li>
+<li>F1-Macro (treats all classes equally)</li>
+<li>Standard deviation (lower = more stable)</li>
+</ul>
+<h3 id="2-per-class-performance"><strong>2. Per-Class Performance</strong></h3>
+<ul>
+<li>Which model better detects each emotion?</li>
+<li>Confusion patterns (what gets misclassified?)</li>
+</ul>
+<h3 id="3-computational-efficiency"><strong>3. Computational Efficiency</strong></h3>
+<ul>
+<li>Extraction time (both ~4-5 hours expected)</li>
+<li>Training time (SVM vs MLP)</li>
+<li>Inference speed (real-world deployment)</li>
+</ul>
+<h3 id="4-embedding-quality"><strong>4. Embedding Quality</strong></h3>
+<ul>
+<li>Visual inspection (t-SNE/UMAP plots)</li>
+<li>Cluster separation (silhouette score)</li>
+<li>Dimensionality (both 1024-dim)</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%94%8D-analysis-plan">🔍 Analysis Plan</h2>
+<h3 id="after-getting-hubert-results"><strong>After Getting HuBERT Results</strong></h3>
+<ol>
+<li>
+<p><strong>Create Comparison Table</strong></p>
+<ul>
+<li>Side-by-side accuracy comparison</li>
+<li>Statistical significance test (t-test on CV folds)</li>
+</ul>
+</li>
+<li>
+<p><strong>Per-Emotion Analysis</strong></p>
+<ul>
+<li>Which emotions does HuBERT excel at?</li>
+<li>Which emotions does WavLM excel at?</li>
+<li>Confusion matrix differences</li>
+</ul>
+</li>
+<li>
+<p><strong>Ensemble Strategy</strong></p>
+<ul>
+<li>If both models have strengths, combine them:
+<ul>
+<li>Feature concatenation: [WavLM (1024) + HuBERT (1024)] → 2048-dim</li>
+<li>Soft voting: Average predictions from both models</li>
+<li>Stacking: Train meta-classifier on both embeddings</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Update Documentation</strong></p>
+<ul>
+<li>Add comparison to <code>PROJECT_DOCUMENTATION.md</code></li>
+<li>Update viva questions with model comparison insights</li>
+<li>Recommend best model for deployment</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="%F0%9F%8E%93-viva-questions-on-model-comparison">🎓 Viva Questions on Model Comparison</h2>
+<h3 id="q1-why-compare-wavlm-and-hubert"><strong>Q1: Why compare WavLM and HuBERT?</strong></h3>
+<p><strong>A</strong>: Both are state-of-the-art SSL models with similar size (316M params) but different pre-training:</p>
+<ul>
+<li>WavLM: Multilingual, denoising objective</li>
+<li>HuBERT: English-focused, clustering-based targets
+Comparing them reveals which pre-training strategy is better for emotion recognition.</li>
+</ul>
+<hr>
+<h3 id="q2-what-are-the-key-differences-between-wavlm-and-hubert"><strong>Q2: What are the key differences between WavLM and HuBERT?</strong></h3>
+<p><strong>A</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>WavLM</th>
+<th>HuBERT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pre-training Data</td>
+<td>94k hours (60+ languages)</td>
+<td>60k hours (English)</td>
+</tr>
+<tr>
+<td>Objective</td>
+<td>Masked prediction + denoising</td>
+<td>k-means clustering + masked prediction</td>
+</tr>
+<tr>
+<td>Targets</td>
+<td>Continuous speech</td>
+<td>Discrete acoustic units</td>
+</tr>
+<tr>
+<td>Strength</td>
+<td>Multilingual, noise-robust</td>
+<td>Acoustic modeling, prosody</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="q3-how-will-you-determine-which-model-is-better"><strong>Q3: How will you determine which model is better?</strong></h3>
+<p><strong>A</strong>: Using 5-fold cross-validation with three metrics:</p>
+<ol>
+<li><strong>Accuracy</strong>: Overall correctness</li>
+<li><strong>F1-Weighted</strong>: Accounts for class imbalance</li>
+<li><strong>F1-Macro</strong>: Treats all emotions equally</li>
+</ol>
+<p>Statistical significance tested with paired t-test on fold results.</p>
+<hr>
+<h3 id="q4-what-if-both-models-perform-similarly"><strong>Q4: What if both models perform similarly?</strong></h3>
+<p><strong>A</strong>: If accuracy difference &lt; 1%, we consider them equivalent. Then:</p>
+<ol>
+<li><strong>Deployment</strong>: Choose based on inference speed, memory</li>
+<li><strong>Ensemble</strong>: Combine both for potential +2-3% boost</li>
+<li><strong>Per-Emotion</strong>: Use WavLM for some emotions, HuBERT for others</li>
+</ol>
+<hr>
+<h3 id="q5-can-you-ensemble-wavlm-and-hubert"><strong>Q5: Can you ensemble WavLM and HuBERT?</strong></h3>
+<p><strong>A</strong>: Yes, two strategies:</p>
+<ol>
+<li><strong>Feature Fusion</strong>: Concatenate embeddings [1024 + 1024] → 2048-dim, train single classifier</li>
+<li><strong>Soft Voting</strong>: Train separate classifiers, average predicted probabilities</li>
+<li><strong>Stacking</strong>: Use both embeddings as input to meta-classifier</li>
+</ol>
+<p>Expected gain: +2-5% accuracy if models have complementary strengths.</p>
+<hr>
+<h2 id="%F0%9F%93%9A-references">📚 References</h2>
+<ol>
+<li><strong>WavLM</strong>: Chen et al., &quot;WavLM: Large-Scale Self-Supervised Pre-Training for Full Stack Speech Processing&quot; (2022)</li>
+<li><strong>HuBERT</strong>: Hsu et al., &quot;HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units&quot; (2021)</li>
+<li><strong>CREMA-D</strong>: Cao et al., &quot;CREMA-D: Crowd-Sourced Emotional Multimodal Actors Dataset&quot; (2014)</li>
+</ol>
+<hr>
+<p><strong>Status</strong>: 🔄 HuBERT extraction in progress (started 2025-11-18 05:34 UTC)<br>
+<strong>ETA</strong>: ~4-5 hours<br>
+<strong>Next Update</strong>: After extraction completes and classifiers are trained</p>
+
+</body>
+</html>
