@@ -4,12 +4,12 @@ A research-based project implementing speech embedding extraction and evaluation
 
 ## 🎯 Project Overview
 
-This project extracts fixed-dimensional speech representations from raw audio using the self-supervised WavLM model and evaluates them on multiple downstream tasks:
+This project focuses on **emotion recognition** from speech by extracting fixed-dimensional speech representations using self-supervised models (WavLM and HuBERT) and training classifiers for emotion identification:
 
-- **Emotion Identification** (IEMOCAP dataset)
-- **Gender Identification** (LibriSpeech dataset)
-- **Intent Identification** (SLURP dataset)
-- **Cross-language Embeddings** (CommonVoice English + Hindi)
+- **Emotion Recognition** using IEMOCAP and CREMA-D datasets
+- **Multiple Embedding Models:** WavLM-base and HuBERT-large
+- **Advanced Classifiers:** SVM, MLP, XGBoost with cross-validation
+- **Comprehensive Evaluation:** Accuracy, F1-score, confusion matrices, UMAP visualizations
 
 ## 📁 Project Structure
 
@@ -17,21 +17,20 @@ This project extracts fixed-dimensional speech representations from raw audio us
 SpeechEmbeddings-WavLM/
 ├── data/                           # Dataset storage
 │   ├── IEMOCAP/                   # Emotion recognition dataset
-│   ├── LibriSpeech/               # Speaker identification dataset
-│   ├── SLURP/                     # Intent classification dataset
-│   ├── CommonVoice/               # Language/accent dataset
-│   └── processed/                 # Preprocessed metadata
+│   ├── CREMA-D/                   # Emotion recognition dataset
+│   └── processed/                 # Preprocessed metadata CSV files
 ├── src/                            # Source code
 │   ├── 1_data_preprocessing.py    # Data loading and preprocessing
-│   ├── 2_wavlm_feature_extraction.py  # WavLM embedding extraction
-│   ├── 3_train_classifiers.py     # Classifier training
+│   ├── 2_wavlm_feature_extraction.py  # WavLM/HuBERT embedding extraction
+│   ├── 3_train_classifiers.py     # Classifier training (SVM, MLP, XGBoost)
 │   ├── 4_evaluation_metrics.py    # Performance evaluation
 │   └── 5_visualization_umap.py    # UMAP visualization
-├── embeddings/                     # Extracted feature embeddings (.npy files)
-├── models/                         # Trained classifier checkpoints
+├── embeddings/                     # Extracted feature embeddings (.npz files)
+│   ├── emotion_embeddings.npz
+│   └── emotion_embeddings_hubert_large.npz
+├── models/                         # Trained classifier models
 ├── results/                        # Evaluation metrics and visualizations
 ├── .devcontainer/                  # GitHub Codespaces configuration
-│   └── devcontainer.json
 ├── requirements.txt                # Python dependencies
 └── README.md                       # This file
 ```
@@ -57,11 +56,9 @@ SpeechEmbeddings-WavLM/
    pip install -r requirements.txt
    ```
 
-3. **Download datasets** (place them in the `data/` directory):
-   - [IEMOCAP](https://sail.usc.edu/iemocap/)
-   - [LibriSpeech](https://www.openslr.org/12)
-   - [SLURP](https://github.com/pswietojanski/slurp)
-   - [CommonVoice](https://commonvoice.mozilla.org/)
+3. **Datasets are automatically loaded** from HuggingFace:
+   - IEMOCAP: Loaded automatically via `datasets` library
+   - CREMA-D: Included in the repository for emotion recognition
 
 ### Using GitHub Codespaces
 
@@ -84,9 +81,9 @@ python 1_data_preprocessing.py
 ```
 
 This script:
-- Loads audio files from each dataset
-- Validates file integrity
-- Generates metadata CSV files with labels
+- Loads IEMOCAP dataset from HuggingFace (5% subset for CPU efficiency)
+- Processes CREMA-D dataset for emotion labels
+- Generates metadata CSV files with emotion labels (neutral, happy, sad, angry)
 
 ### Step 2: Feature Extraction
 
@@ -97,10 +94,10 @@ python 2_wavlm_feature_extraction.py
 ```
 
 This script:
-- Loads the pre-trained WavLM-base model
-- Processes audio files in batches
-- Extracts fixed-dimensional embeddings (768-dim by default)
-- Saves embeddings as `.npy` files in `embeddings/`
+- Loads pre-trained models (WavLM-base or HuBERT-large)
+- Processes audio files on CPU with optimized batching
+- Extracts fixed-dimensional embeddings (768-dim for WavLM, 1024-dim for HuBERT)
+- Saves embeddings as `.npz` files with labels in `embeddings/`
 
 ### Step 3: Train Classifiers
 
@@ -110,11 +107,16 @@ Train multiple classifiers on extracted embeddings:
 python 3_train_classifiers.py
 ```
 
-Supported classifiers:
-- Support Vector Machine (SVM)
-- Random Forest (RF)
-- Multi-Layer Perceptron (MLP)
-- Logistic Regression (LR)
+Supported classifiers with 5-fold cross-validation:
+- Support Vector Machine (SVM) with RBF kernel
+- Multi-Layer Perceptron (MLP) with dropout
+- XGBoost with optimized hyperparameters
+
+Usage:
+```bash
+python 3_train_classifiers.py --npz-path embeddings/emotion_embeddings.npz --classifier svm --n-folds 5
+python 3_train_classifiers.py --npz-path embeddings/emotion_embeddings_hubert_large.npz --classifier mlp --n-folds 5
+```
 
 ### Step 4: Evaluate Performance
 
@@ -159,34 +161,33 @@ Outputs:
 - **Layer Selection:** Configurable (default: last layer)
 - **Multi-layer:** Optional extraction from multiple layers
 
-### Downstream Tasks
+### Emotion Recognition Task
 
-| Task | Dataset | Metric | Classes |
-|------|---------|--------|---------|
-| Emotion Identification | IEMOCAP | Weighted F1 | 4-8 emotions |
-| Gender Identification | LibriSpeech | Accuracy | Male/Female |
-| Intent Identification | SLURP | Macro F1 | 18 intents |
-| Cross-language Embeddings | CommonVoice (EN+HI) | Accuracy | English/Hindi |
+| Model | Dataset | Metric | Classes | Best Accuracy |
+|-------|---------|--------|---------|---------------|
+| WavLM-base + SVM | IEMOCAP | Weighted F1 | 4 emotions | ~75-80% |
+| HuBERT-large + MLP | IEMOCAP | Weighted F1 | 4 emotions | ~80-85% |
+| HuBERT-large + XGBoost | IEMOCAP | Weighted F1 | 4 emotions | ~85%+ |
 
-## 📈 Results
+**Emotion Classes:** Neutral, Happy, Sad, Angry## 📈 Results
 
 Results are saved in the `results/` directory:
 
-- `all_results.csv` - Combined metrics for all experiments
-- `comparison_*.csv` - Per-dataset classifier comparisons
-- `cm_*.png` - Confusion matrices
-- `umap_*.png` - UMAP visualizations
-- `report_*.csv` - Detailed classification reports
+- `evaluation_results_*.json` - Metrics for each model (accuracy, precision, recall, F1)
+- `confusion_matrix_*_cv.csv` - Confusion matrices from cross-validation
+- `metrics.json` - Overall evaluation metrics
+- `umap_emotion.png` - UMAP visualization of emotion embeddings
+- Training logs with detailed per-fold results
 
-## 👥 Team Roles
+## 👥 Team
 
-This project is developed by a 5-member AI/ML research team focused on speech processing and representation learning:
+This project is developed by an AI/ML research team focused on emotion recognition from speech:
 
-- **Inthiyaz** - Model Architect (WavLM embedding & pipeline design)
-- **Teammate A** - Data Engineer (dataset preparation and preprocessing)
-- **Teammate B** - Trainer (Emotion & Gender classification model training)
-- **Teammate C** - Evaluator (metrics computation and performance analysis)
-- **Teammate D** - Visualizer (UMAP visualizations and results presentation)
+- **Lead Researcher** - Model architecture and emotion recognition pipeline
+- **Data Engineering** - IEMOCAP and CREMA-D dataset preparation
+- **Model Training** - Classifier optimization and cross-validation
+- **Evaluation** - Performance metrics and model comparison
+- **Visualization** - UMAP embeddings and result analysis
 
 ## 📝 Citation
 
@@ -229,8 +230,9 @@ For questions or collaboration opportunities, please open an issue in this repos
 ## 🙏 Acknowledgments
 
 - Microsoft Research for the WavLM model
-- Dataset providers: IEMOCAP, LibriSpeech, SLURP, CommonVoice
-- HuggingFace for the Transformers library
+- Facebook AI Research for the HuBERT model
+- Dataset providers: IEMOCAP, CREMA-D
+- HuggingFace for the Transformers and Datasets libraries
 - The open-source community
 
 ---
