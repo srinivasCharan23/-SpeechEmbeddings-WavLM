@@ -1,8 +1,10 @@
 """
-WavLM Feature Extraction Script
-=================================
+Feature Extraction (WavLM / HuBERT)
+===================================
 
-This script extracts fixed-dimensional speech embeddings using the WavLM-base model.
+Extract fixed-dimensional speech embeddings using self-supervised models.
+Default is WavLM-base for IEMOCAP (small subset on CPU). For CREMA-D or
+high-capacity runs, set `model_name` to a larger model (e.g., HuBERT-large).
 Optimized for CPU-only execution with small batch processing.
 
 Based on the IEEE/ACM 2024 paper:
@@ -33,12 +35,15 @@ logger = logging.getLogger(__name__)
 
 
 class WavLMFeatureExtractor:
-    """
-    Extract speech embeddings using WavLM-base model (CPU-optimized).
-    
-    The WavLM model generates contextual representations from raw audio.
-    We extract features from the last layer and use mean pooling.
-    """
+        """
+        Extract speech embeddings (CPU-optimized).
+
+        - Default: WavLM-base (good for quick IEMOCAP validation)
+        - Optional: Set `model_name` to large SSL models (e.g., `facebook/hubert-large-ll60k`)
+            for CREMA-D experiments.
+
+        Uses final hidden layer with configurable pooling (mean/max/first/last).
+        """
     
     def __init__(
         self,

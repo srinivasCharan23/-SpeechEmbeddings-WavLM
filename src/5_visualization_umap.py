@@ -1,9 +1,8 @@
 """
-UMAP Visualization Script
-==========================
+UMAP Visualization (Emotion Embeddings)
+=======================================
 
-This script generates 2D visualization of speech embeddings using UMAP
-for emotion recognition.
+Generate 2D UMAP plots from emotion embeddings to inspect class clusters.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 

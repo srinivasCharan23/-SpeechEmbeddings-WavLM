@@ -1,9 +1,10 @@
 """
-Data Preprocessing Script for Speech Embeddings using WavLM-base
-==================================================================
+Emotion Data Preprocessing (IEMOCAP subset)
+===========================================
 
-This script handles the preprocessing of IEMOCAP dataset for emotion recognition.
-Optimized for CPU-only execution with small dataset subset.
+Emotion-only preprocessing focused on a small IEMOCAP subset for quick
+validation with WavLM-base on CPU. CREMA-D is handled via prepared metadata
+(`data/processed/*.csv`) when available.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
@@ -34,8 +35,10 @@ logger = logging.getLogger(__name__)
 class DataPreprocessor:
     """
     Preprocesses IEMOCAP dataset for emotion recognition (CPU-optimized).
-    
-    Loads data from HuggingFace and filters to 4 emotion classes.
+
+    Loads a small subset from HuggingFace and maps labels to 4 classes
+    {neutral, happy, sad, angry}. CREMA-D is not downloaded here; provide
+    metadata CSV separately when needed.
     """
     
     def __init__(self, data_dir: str = "../data", output_dir: str = "../data/processed"):

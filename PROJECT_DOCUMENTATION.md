@@ -1,5 +1,7 @@
 # CREMA-D Emotion Recognition Project Documentation
 
+<!-- Architecture section moved to MODEL_ARCHITECTURE.md -->
+
 ## 📊 **Project Summary**
 
 **Achieved 79.12% accuracy with HuBERT-Large SVM!** ✅

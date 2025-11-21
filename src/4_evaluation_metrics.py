@@ -1,9 +1,9 @@
 """
-Evaluation Metrics Script
-==========================
+Evaluation Metrics (Emotion-only)
+=================================
 
-This script computes comprehensive evaluation metrics for the trained MLP classifier.
-Generates metrics.json and confusion_matrix.png for emotion recognition.
+Compute evaluation metrics for the trained MLP emotion classifier.
+Generates metrics.json and confusion_matrix.png from `.npz` embeddings.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 

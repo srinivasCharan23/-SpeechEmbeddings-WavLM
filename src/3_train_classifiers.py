@@ -1,9 +1,10 @@
 """
-Classifier Training Script
-===========================
+Classifier Training (Emotion-only)
+==================================
 
-This script trains an MLP classifier on extracted WavLM embeddings
-for emotion identification (CPU-optimized).
+Train an MLP classifier on pre-extracted emotion embeddings (`.npz`).
+Embeddings come from WavLM-base (IEMOCAP subset) or larger models (e.g.,
+HuBERT-large on CREMA-D). CPU-optimized.
 
 Based on the IEEE/ACM 2024 paper:
 'From Raw Speech to Fixed Representations: A Comprehensive Evaluation 
