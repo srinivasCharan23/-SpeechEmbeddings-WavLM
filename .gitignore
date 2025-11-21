@@ -67,6 +67,10 @@ results/*.json
 # Logs
 *.log
 
+# Local export archives (do not track)
+*export_*.zip
+*export_*.tar.gz
+
 # Temporary files
 tmp/
 temp/
