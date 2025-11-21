@@ -4,19 +4,29 @@ This document captures the architecture for the emotion recognition project. It 
 
 ## High-level Pipeline
 
-```mermaid
-flowchart TD
-    A[Raw Audio Datasets]:::ds -->|IEMOCAP via HuggingFace (small subset)\nCREMA-D local WAVs| B[1) Data Preprocessing]
-    B --> C[2) Feature Extraction\nWavLM-base or HuBERT-large\nPooling: mean/max/first/last]
-    C -->|embeddings, labels| D[(NPZ store\nembeddings/emotion_embeddings*.npz)]
-    D --> E[3) Train Classifiers\nMLP (this repo)\nSVM/XGBoost (results supported)]
-    E --> F[(Artifacts\nmodels/*.pt, *_scaler.pkl, *_encoder.pkl)]
-    E --> G[4) Evaluation\nAccuracy / F1 / Confusion Matrix]
-    D --> H[5) UMAP Visualization\n2D embedding plots]
-    G --> R[Results\nresults/*.json, confusion_matrix_*.png]
-    H --> R
+**Interactive Visualizations (Non-Mermaid):**
+- **HTML Version:** [`architecture_pipeline.html`](architecture_pipeline.html)
+- **PNG Image:** [`architecture_pipeline.png`](architecture_pipeline.png)
 
-    classDef ds fill:#eef,stroke:#3366cc,stroke-width:1px
+### ASCII Pipeline:
+```
+Audio Input (WAV: IEMOCAP/CREMA-D)
+    ↓
+[1] Data Preprocessing (normalize, 16 kHz)
+    ↓
+[2] Feature Extraction (WavLM-base/HuBERT-large + pooling)
+    ↓
+Embeddings → embeddings/emotion_embeddings*.npz
+    ↓
+[3] Train Classifiers (MLP/SVM/XGBoost)
+    ↓
+Models → models/*.pt, *_scaler.pkl, *_encoder.pkl
+    ↓
+[4] Evaluation (Accuracy/F1/Confusion Matrix)
+    ↓
+[5] Visualization (UMAP 2D plots)
+    ↓
+Results → results/*.json, confusion_matrix_*.png
 ```
 
 - Preprocessing: `src/1_data_preprocessing.py` (IEMOCAP small subset via HuggingFace; CREMA-D via metadata)
@@ -42,14 +52,24 @@ extractor = WavLMFeatureExtractor(model_name="microsoft/wavlm-base")  # IEMOCAP 
 
 ## MLP Classifier Architecture
 
-```mermaid
-flowchart LR
-    X[Input Embedding\n768 (WavLM-base) or 1024 (HuBERT-large)] --> L1[Linear(in → hidden_dim)\nReLU + Dropout(0.3)]
-    L1 --> L2[Linear(hidden_dim → hidden_dim/2)\nReLU + Dropout(0.3)]
-    L2 --> O[Linear(hidden_dim/2 → num_classes=4)\nSoftmax at inference]
+**Interactive Visualizations:**
+- **HTML Version:** [`architecture_mlp.html`](architecture_mlp.html)
+- **PNG Image:** [`architecture_mlp.png`](architecture_mlp.png)
+
+### ASCII Architecture:
+```
+Input (768-dim from WavLM-base or 1024-dim from HuBERT-large)
+    ↓
+[Dense 256 + ReLU + Dropout(0.3)]
+    ↓
+[Dense 128 + ReLU + Dropout(0.3)]
+    ↓
+[Dense num_classes (4 or 6) + Softmax]
+    ↓
+Emotion Class Output
 ```
 
-Implemented in `src/3_train_classifiers.py` (`SimpleMLP`).
+**Implemented in:** `src/3_train_classifiers.py` (`SimpleMLP` class)
 
 Notes:
 - Emotion classes in this setup: Neutral, Happy, Sad, Angry (4-class setting for IEMOCAP subset). CREMA-D labels follow its 6-class scheme when used to generate embeddings.

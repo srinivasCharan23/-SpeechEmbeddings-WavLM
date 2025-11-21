@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Emotion Recognition Pipeline Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+        }
+        .stage {
+            fill: #667eea;
+            stroke: #333;
+            stroke-width: 2;
+        }
+        .stage:hover {
+            fill: #5568d3;
+            cursor: pointer;
+        }
+        .stage-label {
+            fill: white;
+            font-size: 13px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        .arrow {
+            stroke: #333;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        .description {
+            fill: #555;
+            font-size: 12px;
+            text-anchor: middle;
+        }
+        .legend {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .legend h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .legend-item {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Speech Emotion Recognition Pipeline</h1>
+        <p class="subtitle">WavLM/HuBERT Feature Extraction → Classification</p>
+        
+        <svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                </marker>
+            </defs>
+            
+            <!-- Stage 1: Audio Input -->
+            <rect class="stage" x="30" y="150" width="120" height="100" rx="8"/>
+            <text class="stage-label" x="90" y="200">🎤 Audio<br/>Input</text>
+            <text class="description" x="90" y="270">WAV Files</text>
+            
+            <!-- Arrow 1 -->
+            <line class="arrow" x1="150" y1="200" x2="200" y2="200"/>
+            
+            <!-- Stage 2: Preprocessing -->
+            <rect class="stage" x="200" y="150" width="120" height="100" rx="8"/>
+            <text class="stage-label" x="260" y="200">⚙️ Pre-<br/>process</text>
+            <text class="description" x="260" y="270">Normalize &amp;<br/>Resample</text>
+            
+            <!-- Arrow 2 -->
+            <line class="arrow" x1="320" y1="200" x2="370" y2="200"/>
+            
+            <!-- Stage 3: Feature Extraction -->
+            <rect class="stage" x="370" y="150" width="140" height="100" rx="8"/>
+            <text class="stage-label" x="440" y="190">🧠 Feature<br/>Extraction</text>
+            <text class="stage-label" x="440" y="220" style="font-size: 11px;">(WavLM/HuBERT)</text>
+            <text class="description" x="440" y="270">Embeddings:<br/>768-dim</text>
+            
+            <!-- Arrow 3 -->
+            <line class="arrow" x1="510" y1="200" x2="560" y2="200"/>
+            
+            <!-- Stage 4: Pooling -->
+            <rect class="stage" x="560" y="150" width="120" height="100" rx="8"/>
+            <text class="stage-label" x="620" y="200">📊 Pooling</text>
+            <text class="description" x="620" y="270">Mean/Max</text>
+            
+            <!-- Arrow 4 -->
+            <line class="arrow" x1="680" y1="200" x2="730" y2="200"/>
+            
+            <!-- Stage 5: Classification -->
+            <rect class="stage" x="730" y="150" width="120" height="100" rx="8"/>
+            <text class="stage-label" x="790" y="200">🎯 Classify</text>
+            <text class="description" x="790" y="270">MLP/SVM/<br/>XGBoost</text>
+            
+            <!-- Arrow 5 -->
+            <line class="arrow" x1="850" y1="200" x2="900" y2="200"/>
+            
+            <!-- Stage 6: Output -->
+            <rect class="stage" x="900" y="150" width="70" height="100" rx="8" fill="#764ba2"/>
+            <text class="stage-label" x="935" y="200">😊<br/>Emotion</text>
+            <text class="description" x="935" y="270">Label</text>
+            
+            <!-- Dataset annotations -->
+            <text x="90" y="100" style="fill: #667eea; font-weight: bold; text-anchor: middle;">IEMOCAP / CREMA-D</text>
+            <line x1="60" y1="115" x2="120" y2="150" style="stroke: #667eea; stroke-width: 1.5; stroke-dasharray: 5,5;"/>
+        </svg>
+        
+        <div class="legend">
+            <h3>Pipeline Details</h3>
+            <div class="legend-item"><strong>Audio Input:</strong> Raw WAV files from IEMOCAP or CREMA-D datasets</div>
+            <div class="legend-item"><strong>Preprocessing:</strong> Normalize audio amplitude, resample to 16 kHz</div>
+            <div class="legend-item"><strong>Feature Extraction:</strong> WavLM-base (768-dim) or HuBERT-large (1024-dim) embeddings</div>
+            <div class="legend-item"><strong>Pooling:</strong> Mean or max pooling over time steps to get fixed-size vector</div>
+            <div class="legend-item"><strong>Classification:</strong> Train MLP, SVM, or XGBoost on embeddings</div>
+            <div class="legend-item"><strong>Output:</strong> Emotion class (anger, sadness, happiness, neutral, etc.)</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLP Classifier Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+        }
+        .layer-box {
+            fill: #667eea;
+            stroke: #333;
+            stroke-width: 2;
+        }
+        .layer-box:hover {
+            fill: #5568d3;
+            cursor: pointer;
+        }
+        .layer-label {
+            fill: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+        .layer-dims {
+            fill: #fff;
+            font-size: 10px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            opacity: 0.9;
+        }
+        .neuron {
+            fill: #667eea;
+            stroke: #333;
+            stroke-width: 1.5;
+        }
+        .neuron:hover {
+            fill: #5568d3;
+        }
+        .connection {
+            stroke: #aaa;
+            stroke-width: 0.8;
+            fill: none;
+            opacity: 0.6;
+        }
+        .annotation {
+            fill: #555;
+            font-size: 11px;
+        }
+        .legend {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .legend h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .legend-item {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 MLP Classifier Architecture</h1>
+        <p class="subtitle">Feed-forward Neural Network for Emotion Classification</p>
+        
+        <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+                </marker>
+            </defs>
+            
+            <!-- Input Layer -->
+            <g id="input-layer">
+                <text x="80" y="30" style="font-weight: bold; font-size: 14px; fill: #333;">Input Layer</text>
+                <rect class="layer-box" x="30" y="60" width="100" height="200" rx="8"/>
+                <text class="layer-label" x="80" y="130">Embeddings</text>
+                <text class="layer-dims" x="80" y="155">768-dim</text>
+                <text class="annotation" x="80" y="245">(WavLM-base)</text>
+            </g>
+            
+            <!-- Hidden Layer 1 -->
+            <g id="hidden1-layer">
+                <text x="280" y="30" style="font-weight: bold; font-size: 14px; fill: #333;">Hidden Layer 1</text>
+                <rect class="layer-box" x="230" y="60" width="100" height="200" rx="8" fill="#764ba2"/>
+                <text class="layer-label" x="280" y="130">Dense</text>
+                <text class="layer-dims" x="280" y="155">256 units</text>
+                <text class="annotation" x="280" y="245">ReLU</text>
+            </g>
+            
+            <!-- Connections: Input → Hidden1 -->
+            <g>
+                <line class="connection" x1="130" y1="100" x2="230" y2="100"/>
+                <line class="connection" x1="130" y1="160" x2="230" y2="160"/>
+                <line class="connection" x1="130" y1="220" x2="230" y2="220"/>
+            </g>
+            
+            <!-- Hidden Layer 2 -->
+            <g id="hidden2-layer">
+                <text x="480" y="30" style="font-weight: bold; font-size: 14px; fill: #333;">Hidden Layer 2</text>
+                <rect class="layer-box" x="430" y="60" width="100" height="200" rx="8" fill="#667eea"/>
+                <text class="layer-label" x="480" y="130">Dense</text>
+                <text class="layer-dims" x="480" y="155">128 units</text>
+                <text class="annotation" x="480" y="245">ReLU</text>
+            </g>
+            
+            <!-- Connections: Hidden1 → Hidden2 -->
+            <g>
+                <line class="connection" x1="330" y1="100" x2="430" y2="100"/>
+                <line class="connection" x1="330" y1="160" x2="430" y2="160"/>
+                <line class="connection" x1="330" y1="220" x2="430" y2="220"/>
+            </g>
+            
+            <!-- Dropout -->
+            <g id="dropout">
+                <text x="680" y="30" style="font-weight: bold; font-size: 14px; fill: #333;">Regularization</text>
+                <rect class="layer-box" x="630" y="60" width="100" height="200" rx="8" fill="#ff6b6b"/>
+                <text class="layer-label" x="680" y="130">Dropout</text>
+                <text class="layer-dims" x="680" y="155">p=0.5</text>
+                <text class="annotation" x="680" y="245">Training</text>
+            </g>
+            
+            <!-- Connections: Hidden2 → Dropout -->
+            <g>
+                <line class="connection" x1="530" y1="100" x2="630" y2="100"/>
+                <line class="connection" x1="530" y1="160" x2="630" y2="160"/>
+                <line class="connection" x1="530" y1="220" x2="630" y2="220"/>
+            </g>
+            
+            <!-- Output Layer -->
+            <g id="output-layer">
+                <text x="820" y="30" style="font-weight: bold; font-size: 14px; fill: #333;">Output Layer</text>
+                <rect class="layer-box" x="770" y="60" width="100" height="200" rx="8" fill="#51cf66"/>
+                <text class="layer-label" x="820" y="120">Output</text>
+                <text class="layer-dims" x="820" y="150">4 classes</text>
+                <text class="annotation" x="820" y="185">or 7 classes</text>
+                <text class="annotation" x="820" y="245">Softmax</text>
+            </g>
+            
+            <!-- Connections: Dropout → Output -->
+            <g>
+                <line class="connection" x1="730" y1="100" x2="770" y2="100"/>
+                <line class="connection" x1="730" y1="160" x2="770" y2="160"/>
+                <line class="connection" x1="730" y1="220" x2="770" y2="220"/>
+            </g>
+            
+            <!-- Training Info Box -->
+            <g id="training-info">
+                <rect x="30" y="320" width="840" height="140" rx="8" fill="#f9f9f9" stroke="#ccc" stroke-width="1.5"/>
+                <text x="50" y="345" style="font-weight: bold; font-size: 13px; fill: #333;">Training Configuration</text>
+                
+                <text x="50" y="370" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Loss Function:</tspan> Cross-Entropy</text>
+                <text x="50" y="390" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Optimizer:</tspan> Adam (learning_rate=0.001)</text>
+                <text x="50" y="410" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Batch Size:</tspan> 32</text>
+                <text x="50" y="430" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Epochs:</tspan> 100 (with early stopping)</text>
+                
+                <text x="450" y="370" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Activation:</tspan> ReLU (hidden), Softmax (output)</text>
+                <text x="450" y="390" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Weight Init:</tspan> He Normal</text>
+                <text x="450" y="410" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Regularization:</tspan> L2 + Dropout</text>
+                <text x="450" y="430" style="fill: #555; font-size: 12px;"><tspan font-weight="bold">Validation Split:</tspan> 20%</text>
+            </g>
+        </svg>
+        
+        <div class="legend">
+            <h3>Architecture Summary</h3>
+            <div class="legend-item"><strong>Input:</strong> 768-dimensional embeddings from WavLM-base (or 1024 for HuBERT-large)</div>
+            <div class="legend-item"><strong>Hidden Layer 1:</strong> 256 units with ReLU activation for feature learning</div>
+            <div class="legend-item"><strong>Hidden Layer 2:</strong> 128 units with ReLU activation for higher-level representations</div>
+            <div class="legend-item"><strong>Dropout:</strong> 50% dropout during training to prevent overfitting</div>
+            <div class="legend-item"><strong>Output:</strong> 4 classes (neutral, sadness, happiness, anger) or 6/7 classes depending on dataset</div>
+            <div class="legend-item"><strong>Total Parameters:</strong> ~200K trainable parameters</div>
+        </div>
+    </div>
+</body>
+</html>
